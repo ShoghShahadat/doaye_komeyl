@@ -1,0 +1,67 @@
+name: komeyl_app
+description: A new Flutter project to present the Dua Kumayl with synced audio.
+publish_to: 'none' 
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.3 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  
+  # معادل MediaPlayer برای پخش صوت قدرتمند
+  just_audio: ^0.9.36
+  flutter_colorpicker: ^1.0.3
+  scrollable_positioned_list: ^0.3.8
+  # معادل LottieAnimationView برای انیمیشن‌های لاتی
+  lottie: ^3.0.0
+  provider: ^6.1.5
+  # معادل SharedPreferences برای ذخیره تنظیمات کاربر
+  shared_preferences: ^2.2.2
+
+  # معادل VideoView برای پخش ویدیوی پس‌زمینه
+  video_player: ^2.8.1
+
+  # برای مدیریت درخواست مجوزها از کاربر
+  permission_handler: ^11.2.0
+
+  # برای خواندن و نوشتن روی فایل‌ها (در صورت نیاز آینده)
+  path_provider: ^2.1.2
+  
+  # برای کار با JSON
+  # این کتابخانه بخشی از خود Dart است و نیازی به افزودن ندارد
+
+  cupertino_icons: ^1.0.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0
+
+flutter:
+  uses-material-design: true
+
+  # تعریف دارایی‌ها (Assets)
+  # این بخش به فلاتر می‌گوید که به این فایل‌ها دسترسی داشته باشد
+  assets:
+    - assets/audio/
+    - assets/data/
+    - assets/fonts/
+    - assets/lottie/
+    - assets/video/
+    - assets/images/
+
+  # تعریف فونت‌های سفارشی
+  # این بخش فونت‌ها را به کل برنامه معرفی می‌کند
+  fonts:
+    - family: Alhura
+      fonts:
+        - asset: assets/fonts/alhura.ttf
+          weight: 700
+    - family: Nabi
+      fonts:
+        - asset: assets/fonts/nabi.ttf
+    - family: Font
+      fonts:
+        - asset: assets/fonts/font.ttf
