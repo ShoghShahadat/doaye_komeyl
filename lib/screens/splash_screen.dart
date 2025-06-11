@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'
+    show kIsWeb; // ١. این import برای تشخیص پلتفرم وب اضافه شد
 import 'package:lottie/lottie.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:komeyl_app/screens/main_screen.dart'; // این فایل را در گام بعد میسازیم
+import 'package:komeyl_app/screens/main_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -18,10 +20,13 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _checkPermissionsAndNavigate() async {
-    // در اندرویدهای جدید برای دسترسی به فایل‌های مدیا به این مجوز نیاز است
-    var status = await Permission.storage.status;
-    if (!status.isGranted) {
-      await Permission.storage.request();
+    // ٢. کد درخواست مجوز اکنون درون یک شرط قرار گرفته است
+    // این کد فقط روی پلتفرم‌های غیر وب (موبایل) اجرا می‌شود
+    if (!kIsWeb) {
+      var status = await Permission.storage.status;
+      if (!status.isGranted) {
+        await Permission.storage.request();
+      }
     }
 
     // کمی تاخیر برای نمایش صفحه اسپلش
@@ -29,7 +34,6 @@ class _SplashScreenState extends State<SplashScreen> {
 
     // انتقال به صفحه اصلی
     if (mounted) {
-      // بررسی اینکه ویجت هنوز در درخت ویجت‌ها وجود دارد یا نه
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (context) => const MainScreen()),
       );
@@ -45,10 +49,8 @@ class _SplashScreenState extends State<SplashScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Spacer(),
-            // نمایش لوگو یا بنر
             Image.asset('assets/images/baner.png'),
             const Spacer(),
-            // انیمیشن لاتی
             Lottie.asset(
               'assets/lottie/lodingdot.json',
               width: 100,
