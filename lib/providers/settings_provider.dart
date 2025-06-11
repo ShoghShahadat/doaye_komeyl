@@ -45,7 +45,7 @@ class SettingsProvider with ChangeNotifier {
 
     // --- این بخش تغییر کرده است ---
     // ١. مقدار شفافیت را از حافظه می‌خوانیم
-    double loadedOpacity = prefs.getDouble(BACKGROUND_OPACITY_KEY) ?? 0.3;
+    double loadedOpacity = prefs.getDouble(BACKGROUND_OPACITY_KEY) ?? 0.85;
     // ٢. مقدار خوانده شده را در محدوده مجاز (0.0 تا 0.8) قرار می‌دهیم
     // اگر مقدار خوانده شده 0.9 باشد، به 0.8 تبدیل می‌شود
     _backgroundOpacity = loadedOpacity.clamp(0.5, 1);
