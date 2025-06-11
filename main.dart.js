@@ -78981,7 +78981,7 @@ q.e=m!==!1
 p=A.fR(n.i(0,"\u0631\u0646\u06af \u0628\u0631\u0646\u0627\u0645\u0647"))
 q.f=p!=null?A.ax(p):B.er
 o=A.lk(n.i(0,"\u0634\u0641\u0627\u0641\u06cc\u062a"))
-q.d=B.c.bB(o==null?0.3:o,0.5,1)
+q.d=B.c.bB(o==null?0.85:o,0.5,1)
 q.Y()
 return A.r(null,r)}})
 return A.t($async$wI,r)},
