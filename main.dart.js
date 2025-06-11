@@ -78896,7 +78896,7 @@ wD(){var s=0,r=A.u(t.H),q=1,p=[],o=this,n,m,l,k,j,i
 var $async$wD=A.v(function(a,b){if(a===1){p.push(b)
 s=q}while(true)switch(s){case 0:q=3
 s=6
-return A.o(o.a.vG(A.aEC(A.fL("asset:///assets/audio/alifani.mp3"),null,null),null,!0),$async$wD)
+return A.o(o.a.vG(A.aEC(A.fL("assets/assets/audio/alifani.mp3"),null,null),null,!0),$async$wD)
 case 6:n=b
 l=n
 o.r=l==null?B.m:l
