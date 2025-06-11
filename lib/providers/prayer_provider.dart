@@ -1,24 +1,24 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb; // برای تشخیص پلتفرم وب
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:komeyl_app/models/verse_model.dart';
-import 'package:komeyl_app/models/word_timing_model.dart'; // مدل جدید
+import 'package:komeyl_app/models/word_timing_model.dart';
 
 class PrayerProvider with ChangeNotifier {
   final AudioPlayer _audioPlayer = AudioPlayer();
   List<Verse> _verses = [];
-  Map<String, List<WordTiming>> _wordTimings =
-      {}; // برای نگهداری زمان‌بندی کلمات
+  Map<String, List<WordTiming>> _wordTimings = {};
 
   int _currentVerseIndex = -1;
-  int _currentWordIndex = -1; // ایندکس کلمه فعلی
+  int _currentWordIndex = -1;
 
   Duration _currentPosition = Duration.zero;
   Duration _totalDuration = Duration.zero;
   bool _isPlaying = false;
 
-  // Getters
+  // Getter ها بدون تغییر
   List<Verse> get verses => _verses;
   Map<String, List<WordTiming>> get wordTimings => _wordTimings;
   int get currentVerseIndex => _currentVerseIndex;
@@ -33,7 +33,6 @@ class PrayerProvider with ChangeNotifier {
   }
 
   Future<void> _init() async {
-    // بارگذاری همزمان هر دو فایل
     await Future.wait([
       _loadVerses(),
       _loadWordTimings(),
@@ -42,13 +41,13 @@ class PrayerProvider with ChangeNotifier {
     _listenToPlayerState();
   }
 
+  // این متدها بدون تغییر هستند
   Future<void> _loadVerses() async {
     final String response = await rootBundle.loadString('assets/data/json.txt');
     final List<dynamic> data = json.decode(response);
     _verses = data.map((item) => Verse.fromJson(item)).toList();
   }
 
-  // متد جدید برای بارگذاری زمان‌بندی کلمات
   Future<void> _loadWordTimings() async {
     final String response = await rootBundle.loadString('assets/data/klm.json');
     final Map<String, dynamic> data = json.decode(response);
@@ -63,8 +62,21 @@ class PrayerProvider with ChangeNotifier {
 
   Future<void> _initAudioPlayer() async {
     try {
-      final duration = await _audioPlayer.setAsset('assets/audio/alifani.mp3');
-      _totalDuration = duration ?? Duration.zero;
+      // --- این بخش به طور کامل بازنویسی شده است ---
+      // برای هر پلتفرم، روش بارگذاری متفاوتی را انتخاب می‌کنیم
+      if (kIsWeb) {
+        // در وب، از URL استریم می‌کنیم تا بلافاصله پخش شود.
+        // آدرس دارایی‌های محلی در وب به این شکل است.
+        final duration =
+            await _audioPlayer.setUrl('assets/assets/audio/alifani.mp3');
+        _totalDuration = duration ?? Duration.zero;
+      } else {
+        // در موبایل (اندروید/iOS)، از setAsset استفاده می‌کنیم که بهینه‌تر است.
+        final duration =
+            await _audioPlayer.setAsset('assets/audio/alifani.mp3');
+        _totalDuration = duration ?? Duration.zero;
+      }
+      // --- پایان تغییرات ---
     } catch (e) {
       print("Error loading audio source: $e");
     }
@@ -72,7 +84,7 @@ class PrayerProvider with ChangeNotifier {
     _audioPlayer.positionStream.listen((position) {
       _currentPosition = position;
       _updateCurrentVerseAndWordIndex(position);
-      notifyListeners(); // یکبار اطلاع‌رسانی در انتها کافیست
+      notifyListeners();
     });
   }
 
@@ -83,19 +95,16 @@ class PrayerProvider with ChangeNotifier {
     });
   }
 
-  // متد آپدیت شده برای پیدا کردن فراز و کلمه فعلی
   void _updateCurrentVerseAndWordIndex(Duration position) {
     if (_verses.isEmpty) return;
 
-    // پیدا کردن فراز فعلی
     final newVerseIndex = _verses
         .lastIndexWhere((verse) => verse.startTime <= position.inMilliseconds);
     if (newVerseIndex != _currentVerseIndex) {
       _currentVerseIndex = newVerseIndex;
-      _currentWordIndex = -1; // با تغییر فراز، ایندکس کلمه ریست می‌شود
+      _currentWordIndex = -1;
     }
 
-    // پیدا کردن کلمه فعلی در فراز جاری
     if (_currentVerseIndex != -1) {
       final verseKey = 'آیه${_verses[_currentVerseIndex].id}';
       final timings = _wordTimings[verseKey];
