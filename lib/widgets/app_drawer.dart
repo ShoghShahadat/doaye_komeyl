@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:komeyl_app/screens/admin/project_list_screen.dart'; // import صفحه جدید
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key});
@@ -27,6 +28,29 @@ class AppDrawer extends StatelessWidget {
               ],
             ),
           ),
+          ListTile(
+            leading: const Icon(Icons.home_outlined),
+            title: const Text('صفحه اصلی'),
+            onTap: () {
+              Navigator.pop(context); // بستن منو
+            },
+          ),
+          const Divider(),
+          // گزینه جدید برای ورود به پنل
+          ListTile(
+            leading: const Icon(Icons.tune_rounded, color: Colors.deepOrange),
+            title: const Text('پنل کالیبراسیون',
+                style: TextStyle(color: Colors.deepOrange)),
+            onTap: () {
+              Navigator.pop(context); // ابتدا منو را ببند
+              Navigator.of(context).push(
+                // سپس به صفحه لیست پروژه‌ها برو
+                MaterialPageRoute(
+                    builder: (context) => const ProjectListScreen()),
+              );
+            },
+          ),
+          const Divider(),
           ListTile(
             leading: const Icon(Icons.info_outline),
             title: const Text('درباره ما'),

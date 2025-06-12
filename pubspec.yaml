@@ -12,6 +12,7 @@ dependencies:
   
   # معادل MediaPlayer برای پخش صوت قدرتمند
   just_audio: ^0.9.36
+  file_picker: ^8.0.0+1
   flutter_colorpicker: ^1.0.3
   scrollable_positioned_list: ^0.3.8
   # معادل LottieAnimationView برای انیمیشن‌های لاتی
@@ -19,7 +20,8 @@ dependencies:
   provider: ^6.1.5
   # معادل SharedPreferences برای ذخیره تنظیمات کاربر
   shared_preferences: ^2.2.2
-
+  archive: ^3.5.1
+  file_saver: ^0.2.12
   # معادل VideoView برای پخش ویدیوی پس‌زمینه
   video_player: ^2.8.1
 
