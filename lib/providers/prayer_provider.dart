@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'dart:convert';
-import 'package:flutter/foundation.dart' show kIsWeb; // برای تشخیص پلتفرم وب
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:komeyl_app/models/verse_model.dart';
+// --- شروع اصلاحات: رفع خطای تایپی در آدرس‌دهی ---
 import 'package:komeyl_app/models/word_timing_model.dart';
+// --- پایان اصلاحات ---
 
 class PrayerProvider with ChangeNotifier {
   final AudioPlayer _audioPlayer = AudioPlayer();
@@ -18,7 +21,13 @@ class PrayerProvider with ChangeNotifier {
   Duration _totalDuration = Duration.zero;
   bool _isPlaying = false;
 
-  // Getter ها بدون تغییر
+  // --- شروع اصلاحات: افزودن مکانیزم Stream برای اعلام آمادگی ---
+  final _readyController = StreamController<bool>.broadcast();
+  Stream<bool> get onReady => _readyController.stream;
+  bool _isReady = false;
+  bool get isReady => _isReady;
+  // --- پایان اصلاحات ---
+
   List<Verse> get verses => _verses;
   Map<String, List<WordTiming>> get wordTimings => _wordTimings;
   int get currentVerseIndex => _currentVerseIndex;
@@ -36,49 +45,62 @@ class PrayerProvider with ChangeNotifier {
     await Future.wait([
       _loadVerses(),
       _loadWordTimings(),
+      _initAudioPlayer(),
     ]);
-    await _initAudioPlayer();
+
     _listenToPlayerState();
+
+    _isReady = true;
+    // به همه اطلاع می‌دهیم که Provider آماده است
+    if (!_readyController.isClosed) {
+      _readyController.add(true);
+    }
+    notifyListeners();
   }
 
-  // این متدها بدون تغییر هستند
   Future<void> _loadVerses() async {
-    final String response = await rootBundle.loadString('assets/data/json.txt');
-    final List<dynamic> data = json.decode(response);
-    _verses = data.map((item) => Verse.fromJson(item)).toList();
+    try {
+      final String response =
+          await rootBundle.loadString('assets/data/json.txt');
+      final List<dynamic> data = json.decode(response);
+      _verses = data.map((item) => Verse.fromJson(item)).toList();
+    } catch (e) {
+      debugPrint("Error loading verses: $e");
+      _verses = [];
+    }
   }
 
   Future<void> _loadWordTimings() async {
-    final String response = await rootBundle.loadString('assets/data/klm.json');
-    final Map<String, dynamic> data = json.decode(response);
-    _wordTimings = data.map((key, value) {
-      final List<dynamic> wordList = value;
-      return MapEntry(
-        key,
-        wordList.map((item) => WordTiming.fromJson(item)).toList(),
-      );
-    });
+    try {
+      final String response =
+          await rootBundle.loadString('assets/data/klm.json');
+      final Map<String, dynamic> data = json.decode(response);
+      _wordTimings = data.map((key, value) {
+        final List<dynamic> wordList = value;
+        return MapEntry(
+          key,
+          wordList.map((item) => WordTiming.fromJson(item)).toList(),
+        );
+      });
+    } catch (e) {
+      debugPrint("Error loading word timings: $e");
+      _wordTimings = {};
+    }
   }
 
   Future<void> _initAudioPlayer() async {
     try {
-      // --- این بخش به طور کامل بازنویسی شده است ---
-      // برای هر پلتفرم، روش بارگذاری متفاوتی را انتخاب می‌کنیم
       if (kIsWeb) {
-        // در وب، از URL استریم می‌کنیم تا بلافاصله پخش شود.
-        // آدرس دارایی‌های محلی در وب به این شکل است.
         final duration =
             await _audioPlayer.setUrl('assets/assets/audio/alifani.mp3');
         _totalDuration = duration ?? Duration.zero;
       } else {
-        // در موبایل (اندروید/iOS)، از setAsset استفاده می‌کنیم که بهینه‌تر است.
         final duration =
             await _audioPlayer.setAsset('assets/audio/alifani.mp3');
         _totalDuration = duration ?? Duration.zero;
       }
-      // --- پایان تغییرات ---
     } catch (e) {
-      print("Error loading audio source: $e");
+      debugPrint("Error loading audio source: $e");
     }
 
     _audioPlayer.positionStream.listen((position) {
@@ -125,6 +147,7 @@ class PrayerProvider with ChangeNotifier {
   @override
   void dispose() {
     _audioPlayer.dispose();
+    _readyController.close();
     super.dispose();
   }
 }

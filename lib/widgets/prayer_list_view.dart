@@ -12,8 +12,10 @@ class PrayerListView extends StatefulWidget {
   State<PrayerListView> createState() => _PrayerListViewState();
 }
 
+// --- شروع اصلاحات: افزودن AutomaticKeepAliveClientMixin ---
 class _PrayerListViewState extends State<PrayerListView>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
+  // --- پایان اصلاحات ---
   final ItemScrollController _itemScrollController = ItemScrollController();
   final ItemPositionsListener _itemPositionsListener =
       ItemPositionsListener.create();
@@ -22,6 +24,11 @@ class _PrayerListViewState extends State<PrayerListView>
   late AnimationController _progressAnimationController;
   bool _showScrollButtons = false;
   int _visibleItemIndex = 0;
+
+  // --- شروع اصلاحات: Override کردن wantKeepAlive ---
+  @override
+  bool get wantKeepAlive => true;
+  // --- پایان اصلاحات ---
 
   @override
   void initState() {
@@ -35,8 +42,8 @@ class _PrayerListViewState extends State<PrayerListView>
       vsync: this,
     );
 
-    // Listen to scroll position
     _itemPositionsListener.itemPositions.addListener(() {
+      if (!mounted) return;
       final positions = _itemPositionsListener.itemPositions.value;
       if (positions.isNotEmpty) {
         final firstVisibleIndex = positions
@@ -45,10 +52,12 @@ class _PrayerListViewState extends State<PrayerListView>
                 position.itemLeadingEdge < min.itemLeadingEdge ? position : min)
             .index;
 
-        setState(() {
-          _visibleItemIndex = firstVisibleIndex;
-          _showScrollButtons = firstVisibleIndex > 2;
-        });
+        if (mounted) {
+          setState(() {
+            _visibleItemIndex = firstVisibleIndex;
+            _showScrollButtons = firstVisibleIndex > 2;
+          });
+        }
 
         if (_showScrollButtons && !_fabAnimationController.isCompleted) {
           _fabAnimationController.forward();
@@ -68,31 +77,34 @@ class _PrayerListViewState extends State<PrayerListView>
 
   @override
   Widget build(BuildContext context) {
+    // --- شروع اصلاحات: فراخوانی super.build ---
+    super.build(context);
+    // --- پایان اصلاحات ---
     return Consumer<PrayerProvider>(
       builder: (context, prayerProvider, child) {
         if (prayerProvider.verses.isEmpty) {
           return const _LoadingView();
         }
 
-        // Smart scrolling logic
         if (prayerProvider.currentVerseIndex != _lastScrolledIndex &&
             _itemScrollController.isAttached) {
           _lastScrolledIndex = prayerProvider.currentVerseIndex;
           _progressAnimationController.forward(from: 0);
 
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            _itemScrollController.scrollTo(
-              index: prayerProvider.currentVerseIndex,
-              duration: const Duration(milliseconds: 800),
-              curve: Curves.easeInOutCubic,
-              alignment: 0.4,
-            );
+            if (_itemScrollController.isAttached) {
+              _itemScrollController.scrollTo(
+                index: prayerProvider.currentVerseIndex,
+                duration: const Duration(milliseconds: 800),
+                curve: Curves.easeInOutCubic,
+                alignment: 0.4,
+              );
+            }
           });
         }
 
         return Stack(
           children: [
-            // Background decoration
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -105,7 +117,6 @@ class _PrayerListViewState extends State<PrayerListView>
                 ),
               ),
             ),
-            // Main list
             ScrollablePositionedList.builder(
               itemScrollController: _itemScrollController,
               itemPositionsListener: _itemPositionsListener,
@@ -118,31 +129,14 @@ class _PrayerListViewState extends State<PrayerListView>
               itemCount: prayerProvider.verses.length,
               itemBuilder: (context, index) {
                 final verse = prayerProvider.verses[index];
-                return TweenAnimationBuilder<double>(
-                  tween: Tween(begin: 0.0, end: 1.0),
-                  duration: Duration(milliseconds: 300 + (index * 30)),
-                  curve: Curves.easeOutCubic,
-                  builder: (context, value, child) {
-                    return Transform.scale(
-                      scale: 0.8 + (0.2 * value),
-                      child: Opacity(
-                        opacity: value,
-                        child: child,
-                      ),
-                    );
-                  },
-                  child: ModernVerseListItem(
-                    verse: verse,
-                    index: index,
-                    // isVisible: index >= _visibleItemIndex - 1 &&
-                    //     index <= _visibleItemIndex + 5,
-                  ),
+                return ModernVerseListItem(
+                  key: ValueKey(verse.id), // افزودن کلید برای پایداری
+                  verse: verse,
+                  index: index,
                 );
               },
             ),
-            // Progress indicator
             _buildProgressIndicator(prayerProvider),
-            // Floating action buttons
             _buildFloatingButtons(prayerProvider),
           ],
         );
@@ -151,6 +145,7 @@ class _PrayerListViewState extends State<PrayerListView>
   }
 
   Widget _buildProgressIndicator(PrayerProvider prayerProvider) {
+    if (prayerProvider.verses.isEmpty) return const SizedBox.shrink();
     final progress =
         prayerProvider.currentVerseIndex / (prayerProvider.verses.length - 1);
 
@@ -198,7 +193,6 @@ class _PrayerListViewState extends State<PrayerListView>
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Scroll to current button
           ScaleTransition(
             scale: _fabAnimationController,
             child: Container(
@@ -225,7 +219,6 @@ class _PrayerListViewState extends State<PrayerListView>
               ),
             ),
           ),
-          // Scroll to top button
           ScaleTransition(
             scale: _fabAnimationController,
             child: FloatingActionButton(
@@ -253,7 +246,6 @@ class _PrayerListViewState extends State<PrayerListView>
   }
 }
 
-// Loading View Widget
 class _LoadingView extends StatefulWidget {
   const _LoadingView();
 

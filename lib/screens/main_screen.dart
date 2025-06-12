@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:ui';
-import 'dart:math' as math;
 import 'package:komeyl_app/providers/prayer_provider.dart';
 import 'package:komeyl_app/providers/settings_provider.dart';
 import 'package:komeyl_app/widgets/app_drawer.dart';
@@ -67,6 +66,32 @@ class _ModernMainScreenState extends State<ModernMainScreen>
       curve: Curves.easeOutBack,
     ));
 
+    // --- شروع اصلاحات: اجرای انیمیشن‌ها پس از ساخت اولین فریم برای جلوگیری از لگ ---
+    final prayerProvider = context.read<PrayerProvider>();
+
+    void runAnimationsAfterBuild() {
+      // این تضمین می‌کند که فریم اولیه رندر شده و سپس انیمیشن‌های سنگین شروع می‌شوند.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _startAnimations();
+        }
+      });
+    }
+
+    if (prayerProvider.isReady) {
+      runAnimationsAfterBuild();
+    } else {
+      // منتظر می‌مانیم تا Provider آماده شود.
+      prayerProvider.onReady.first.then((_) {
+        if (mounted) {
+          runAnimationsAfterBuild();
+        }
+      });
+    }
+    // --- پایان اصلاحات ---
+  }
+
+  void _startAnimations() {
     _appBarAnimationController.forward();
     _fabAnimationController.forward();
     _tabAnimationController.forward();
@@ -82,13 +107,24 @@ class _ModernMainScreenState extends State<ModernMainScreen>
 
   @override
   Widget build(BuildContext context) {
+    final prayerProvider = Provider.of<PrayerProvider>(context);
+    // نمایش یک Loading Indicator تا زمانی که Provider آماده شود
+    if (!prayerProvider.isReady) {
+      return Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(
+            color: Theme.of(context).primaryColor,
+          ),
+        ),
+      );
+    }
+
     return DefaultTabController(
       length: 2,
       child: Scaffold(
         drawer: const AppDrawer(),
         body: Stack(
           children: [
-            // پس‌زمینه گرادیان
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -101,10 +137,8 @@ class _ModernMainScreenState extends State<ModernMainScreen>
                 ),
               ),
             ),
-            // محتوای اصلی
             Column(
               children: [
-                // AppBar سفارشی
                 AnimatedBuilder(
                   animation: _appBarAnimation,
                   builder: (context, child) {
@@ -114,9 +148,7 @@ class _ModernMainScreenState extends State<ModernMainScreen>
                     );
                   },
                 ),
-                // کنترل‌های پخش
                 const ModernPlayerControlsWidget(),
-                // TabBar
                 AnimatedBuilder(
                   animation: _tabSlideAnimation,
                   builder: (context, child) {
@@ -126,7 +158,6 @@ class _ModernMainScreenState extends State<ModernMainScreen>
                     );
                   },
                 ),
-                // TabBarView
                 const Expanded(
                   child: TabBarView(
                     physics: NeverScrollableScrollPhysics(),
@@ -138,7 +169,6 @@ class _ModernMainScreenState extends State<ModernMainScreen>
                 ),
               ],
             ),
-            // دکمه تنظیمات شناور
             _buildFloatingSettingsButton(context),
           ],
         ),
@@ -165,7 +195,6 @@ class _ModernMainScreenState extends State<ModernMainScreen>
           padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Row(
             children: [
-              // دکمه منو
               IconButton(
                 icon: Container(
                   padding: const EdgeInsets.all(8),
@@ -183,7 +212,6 @@ class _ModernMainScreenState extends State<ModernMainScreen>
                   Scaffold.of(context).openDrawer();
                 },
               ),
-              // عنوان و لوگو
               Expanded(
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -218,7 +246,7 @@ class _ModernMainScreenState extends State<ModernMainScreen>
                                 ),
                               ],
                             ),
-                            child: Center(
+                            child: const Center(
                               child: Text(
                                 'د',
                                 style: TextStyle(
@@ -260,7 +288,7 @@ class _ModernMainScreenState extends State<ModernMainScreen>
                   ],
                 ),
               ),
-              const SizedBox(width: 56), // برای متقارن بودن
+              const SizedBox(width: 56),
             ],
           ),
         ),
@@ -418,11 +446,15 @@ class _ModernPlayerControlsWidgetState extends State<ModernPlayerControlsWidget>
     final prayerProvider = Provider.of<PrayerProvider>(context);
     final settingsProvider = Provider.of<SettingsProvider>(context);
 
-    if (prayerProvider.isPlaying && !_lottieController.isAnimating) {
+    // --- شروع اصلاحات: شرط مطمئن برای جلوگیری از خطای انیمیشن ---
+    if (prayerProvider.isPlaying &&
+        !_lottieController.isAnimating &&
+        _lottieController.duration != null) {
       _lottieController.repeat();
     } else if (!prayerProvider.isPlaying && _lottieController.isAnimating) {
       _lottieController.reset();
     }
+    // --- پایان اصلاحات ---
 
     return Visibility(
       visible: settingsProvider.showTimeline,
@@ -451,13 +483,11 @@ class _ModernPlayerControlsWidgetState extends State<ModernPlayerControlsWidget>
                   height: _isExpanded ? 140 : 70,
                   child: Column(
                     children: [
-                      // بخش اصلی کنترل
                       Container(
                         height: 70,
                         padding: const EdgeInsets.symmetric(horizontal: 20),
                         child: Row(
                           children: [
-                            // دکمه پلی/پاز
                             AnimatedBuilder(
                               animation: _pulseAnimation,
                               builder: (context, child) {
@@ -493,9 +523,11 @@ class _ModernPlayerControlsWidgetState extends State<ModernPlayerControlsWidget>
                                       child: InkWell(
                                         onTap: () {
                                           HapticFeedback.lightImpact();
-                                          prayerProvider.isPlaying
-                                              ? prayerProvider.pause()
-                                              : prayerProvider.play();
+                                          if (prayerProvider.isPlaying) {
+                                            prayerProvider.pause();
+                                          } else {
+                                            prayerProvider.play();
+                                          }
                                         },
                                         borderRadius: BorderRadius.circular(25),
                                         child: Icon(
@@ -512,7 +544,6 @@ class _ModernPlayerControlsWidgetState extends State<ModernPlayerControlsWidget>
                               },
                             ),
                             const SizedBox(width: 16),
-                            // اطلاعات زمان
                             Expanded(
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -542,13 +573,11 @@ class _ModernPlayerControlsWidgetState extends State<ModernPlayerControlsWidget>
                                     ],
                                   ),
                                   const SizedBox(height: 8),
-                                  // نوار پیشرفت
                                   _buildModernProgressBar(prayerProvider),
                                 ],
                               ),
                             ),
                             const SizedBox(width: 16),
-                            // اکولایزر
                             if (settingsProvider.showEqualizer)
                               Visibility(
                                 visible: prayerProvider.isPlaying,
@@ -573,7 +602,6 @@ class _ModernPlayerControlsWidgetState extends State<ModernPlayerControlsWidget>
                                   ),
                                 ),
                               ),
-                            // دکمه expand/collapse
                             IconButton(
                               icon: AnimatedRotation(
                                 turns: _isExpanded ? 0.5 : 0,
@@ -592,7 +620,6 @@ class _ModernPlayerControlsWidgetState extends State<ModernPlayerControlsWidget>
                           ],
                         ),
                       ),
-                      // اسلایدر کامل
                       if (_isExpanded)
                         Expanded(
                           child: Padding(
@@ -628,11 +655,20 @@ class _ModernPlayerControlsWidgetState extends State<ModernPlayerControlsWidget>
                                     child: Slider(
                                       value: prayerProvider
                                           .currentPosition.inMilliseconds
-                                          .toDouble(),
+                                          .toDouble()
+                                          .clamp(
+                                              0.0,
+                                              prayerProvider
+                                                  .totalDuration.inMilliseconds
+                                                  .toDouble()),
                                       min: 0,
-                                      max: prayerProvider
-                                          .totalDuration.inMilliseconds
-                                          .toDouble(),
+                                      max: prayerProvider.totalDuration
+                                                  .inMilliseconds >
+                                              0
+                                          ? prayerProvider
+                                              .totalDuration.inMilliseconds
+                                              .toDouble()
+                                          : 1.0,
                                       onChanged: (value) {
                                         prayerProvider.seek(Duration(
                                             milliseconds: value.toInt()));
@@ -664,8 +700,9 @@ class _ModernPlayerControlsWidgetState extends State<ModernPlayerControlsWidget>
 
   Widget _buildModernProgressBar(PrayerProvider prayerProvider) {
     final progress = prayerProvider.totalDuration.inMilliseconds > 0
-        ? prayerProvider.currentPosition.inMilliseconds /
-            prayerProvider.totalDuration.inMilliseconds
+        ? (prayerProvider.currentPosition.inMilliseconds /
+                prayerProvider.totalDuration.inMilliseconds)
+            .clamp(0.0, 1.0)
         : 0.0;
 
     return Container(

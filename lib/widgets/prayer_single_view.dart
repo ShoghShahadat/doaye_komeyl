@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'dart:ui';
 import 'package:komeyl_app/models/verse_model.dart';
 import 'package:komeyl_app/models/word_timing_model.dart';
@@ -15,14 +14,21 @@ class ModernPrayerSingleView extends StatefulWidget {
   State<ModernPrayerSingleView> createState() => _ModernPrayerSingleViewState();
 }
 
+// --- شروع اصلاحات: افزودن AutomaticKeepAliveClientMixin ---
 class _ModernPrayerSingleViewState extends State<ModernPrayerSingleView>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
+  // --- پایان اصلاحات ---
   late AnimationController _slideController;
   late AnimationController _fadeController;
   late AnimationController _scaleController;
   late Animation<double> _slideAnimation;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
+
+  // --- شروع اصلاحات: Override کردن wantKeepAlive ---
+  @override
+  bool get wantKeepAlive => true;
+  // --- پایان اصلاحات ---
 
   @override
   void initState() {
@@ -79,6 +85,9 @@ class _ModernPrayerSingleViewState extends State<ModernPrayerSingleView>
 
   @override
   Widget build(BuildContext context) {
+    // --- شروع اصلاحات: فراخوانی super.build ---
+    super.build(context);
+    // --- پایان اصلاحات ---
     final prayerProvider = Provider.of<PrayerProvider>(context);
     final settingsProvider = Provider.of<SettingsProvider>(context);
 
@@ -96,10 +105,7 @@ class _ModernPrayerSingleViewState extends State<ModernPrayerSingleView>
     return Stack(
       fit: StackFit.expand,
       children: [
-        // ویدیو پس‌زمینه
         const _ModernBackgroundVideo(),
-
-        // افکت blur
         BackdropFilter(
           filter: ImageFilter.blur(
             sigmaX: 5.0,
@@ -109,8 +115,6 @@ class _ModernPrayerSingleViewState extends State<ModernPrayerSingleView>
             color: Colors.transparent,
           ),
         ),
-
-        // محتوای اصلی
         AnimatedBuilder(
           animation: Listenable.merge([
             _slideController,
@@ -136,8 +140,6 @@ class _ModernPrayerSingleViewState extends State<ModernPrayerSingleView>
             );
           },
         ),
-
-        // دکوریشن‌های تزئینی
         _buildDecorations(context, settingsProvider),
       ],
     );
@@ -187,11 +189,8 @@ class _ModernPrayerSingleViewState extends State<ModernPrayerSingleView>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // شماره آیه با طراحی زیبا
                 _buildVerseNumber(currentVerse, settingsProvider),
                 const SizedBox(height: 32),
-
-                // کانتینر متن عربی
                 Container(
                   constraints: const BoxConstraints(maxWidth: 800),
                   padding: const EdgeInsets.symmetric(
@@ -220,15 +219,9 @@ class _ModernPrayerSingleViewState extends State<ModernPrayerSingleView>
                     currentVerse,
                   ),
                 ),
-
                 const SizedBox(height: 40),
-
-                // خط جداکننده انیمیشنی
                 _buildAnimatedDivider(settingsProvider),
-
                 const SizedBox(height: 40),
-
-                // کانتینر ترجمه
                 Container(
                   constraints: const BoxConstraints(maxWidth: 700),
                   padding: const EdgeInsets.symmetric(
@@ -299,7 +292,7 @@ class _ModernPrayerSingleViewState extends State<ModernPrayerSingleView>
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
+                const Icon(
                   Icons.auto_awesome,
                   color: Colors.white,
                   size: 20,
@@ -418,7 +411,6 @@ class _ModernPrayerSingleViewState extends State<ModernPrayerSingleView>
       BuildContext context, SettingsProvider settingsProvider) {
     return Stack(
       children: [
-        // دایره تزئینی بالا راست
         Positioned(
           top: -100,
           right: -100,
@@ -436,7 +428,6 @@ class _ModernPrayerSingleViewState extends State<ModernPrayerSingleView>
             ),
           ),
         ),
-        // دایره تزئینی پایین چپ
         Positioned(
           bottom: -150,
           left: -150,
@@ -532,7 +523,6 @@ class _ModernPrayerSingleViewState extends State<ModernPrayerSingleView>
   }
 }
 
-// ویو لودینگ مدرن
 class _ModernLoadingView extends StatefulWidget {
   const _ModernLoadingView();
 
@@ -602,7 +592,6 @@ class _ModernLoadingViewState extends State<_ModernLoadingView>
   }
 }
 
-// ویدیو پس‌زمینه مدرن
 class _ModernBackgroundVideo extends StatefulWidget {
   const _ModernBackgroundVideo();
 
@@ -619,12 +608,14 @@ class _ModernBackgroundVideoState extends State<_ModernBackgroundVideo> {
     super.initState();
     _controller = VideoPlayerController.asset('assets/video/video.mp4')
       ..initialize().then((_) {
-        setState(() {
-          _isInitialized = true;
-        });
-        _controller.setLooping(true);
-        _controller.setVolume(0.0);
-        _controller.play();
+        if (mounted) {
+          setState(() {
+            _isInitialized = true;
+          });
+          _controller.setLooping(true);
+          _controller.setVolume(0.0);
+          _controller.play();
+        }
       });
   }
 

@@ -22,7 +22,8 @@ class _ModernSettingsSheetState extends State<ModernSettingsSheet>
   void initState() {
     super.initState();
     _slideController = AnimationController(
-      duration: const Duration(milliseconds: 600),
+      duration:
+          const Duration(milliseconds: 800), // کمی افزایش زمان برای نرمی بیشتر
       vsync: this,
     );
     _fadeController = AnimationController(
@@ -31,7 +32,17 @@ class _ModernSettingsSheetState extends State<ModernSettingsSheet>
     );
 
     // انیمیشن برای هر آیتم
-    _itemAnimations = List.generate(7, (index) {
+    const int itemCount = 7;
+    _itemAnimations = List.generate(itemCount, (index) {
+      // --- شروع اصلاحات ---
+      // فرمول جدید برای محاسبه بازه زمانی انیمیشن تا از 1.0 بیشتر نشود
+      const double staggerFraction = 0.1; // تاخیر بین هر آیتم
+      const double itemDuration = 0.4; // مدت زمان انیمیشن هر آیتم
+
+      final double startTime = index * staggerFraction;
+      final double endTime = (startTime + itemDuration)
+          .clamp(0.0, 1.0); // اطمینان از اینکه انتها از 1.0 بیشتر نمی‌شود
+
       return Tween<double>(
         begin: 0,
         end: 1,
@@ -39,12 +50,13 @@ class _ModernSettingsSheetState extends State<ModernSettingsSheet>
         CurvedAnimation(
           parent: _slideController,
           curve: Interval(
-            index * 0.1,
-            0.5 + index * 0.1,
+            startTime,
+            endTime,
             curve: Curves.easeOutCubic,
           ),
         ),
       );
+      // --- پایان اصلاحات ---
     });
 
     _slideController.forward();
