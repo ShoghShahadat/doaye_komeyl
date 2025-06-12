@@ -1,33 +1,40 @@
 class CalibrationProject {
   final String id;
   String title;
-  String audioPath; // مسیر فایل صوتی در حافظه دستگاه
-  String textPath; // مسیر فایل متنی در حافظه دستگاه
+  String audioPath;
+  // نوع ورود متن: 'interleaved' یا 'separate'
+  String textParsingMode;
+  String mainTextPath; // مسیر فایل اصلی (عربی)
+  String? translationTextPath; // مسیر فایل ترجمه (در حالت مجزا)
 
   CalibrationProject({
     required this.id,
     required this.title,
     required this.audioPath,
-    required this.textPath,
+    required this.textParsingMode,
+    required this.mainTextPath,
+    this.translationTextPath,
   });
 
-  // متد برای تبدیل مدل به نقشه (Map) جهت ذخیره‌سازی در JSON
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'title': title,
       'audioPath': audioPath,
-      'textPath': textPath,
+      'textParsingMode': textParsingMode,
+      'mainTextPath': mainTextPath,
+      'translationTextPath': translationTextPath,
     };
   }
 
-  // متد برای ساختن مدل از روی نقشه (Map) خوانده شده از JSON
   factory CalibrationProject.fromJson(Map<String, dynamic> json) {
     return CalibrationProject(
       id: json['id'],
       title: json['title'],
       audioPath: json['audioPath'],
-      textPath: json['textPath'],
+      textParsingMode: json['textParsingMode'] ?? 'interleaved',
+      mainTextPath: json['mainTextPath'],
+      translationTextPath: json['translationTextPath'],
     );
   }
 }

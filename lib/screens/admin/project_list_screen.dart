@@ -57,73 +57,158 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
   Future<void> _showCreateProjectDialog() async {
     final titleController = TextEditingController();
     String? audioPath;
-    String? textPath;
+    String? mainTextPath;
+    String? translationTextPath;
+    String parsingMode = 'interleaved';
+
+    FilePickerResult? result;
 
     await showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (context) {
-        return AlertDialog(
-          title: const Text('ساخت پروژه جدید'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: titleController,
-                decoration: const InputDecoration(labelText: 'نام پروژه'),
+        return StatefulBuilder(
+          builder: (context, setStateInDialog) {
+            return AlertDialog(
+              title: const Text('ساخت پروژه جدید'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    TextField(
+                      controller: titleController,
+                      decoration: const InputDecoration(
+                          labelText: 'نام پروژه', border: OutlineInputBorder()),
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownButtonFormField<String>(
+                      value: parsingMode,
+                      decoration: const InputDecoration(
+                          labelText: 'حالت ورود متن',
+                          border: OutlineInputBorder()),
+                      items: const [
+                        DropdownMenuItem(
+                            value: 'interleaved',
+                            child: Text('ترکیبی (عربی و ترجمه)')),
+                        DropdownMenuItem(
+                            value: 'separate', child: Text('مجزا')),
+                      ],
+                      onChanged: (value) {
+                        setStateInDialog(() {
+                          parsingMode = value!;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.audiotrack),
+                      label: Text(audioPath == null
+                          ? 'انتخاب فایل صوتی'
+                          : 'فایل صوتی انتخاب شد'),
+                      onPressed: () async {
+                        result = await FilePicker.platform
+                            .pickFiles(type: FileType.audio);
+                        if (result != null) {
+                          setStateInDialog(() {
+                            audioPath = result!.files.single.path;
+                          });
+                        }
+                      },
+                    ),
+                    if (parsingMode == 'interleaved')
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.text_fields),
+                        label: Text(mainTextPath == null
+                            ? 'انتخاب فایل متن ترکیبی'
+                            : 'فایل متن انتخاب شد'),
+                        onPressed: () async {
+                          result = await FilePicker.platform.pickFiles(
+                              type: FileType.custom,
+                              allowedExtensions: ['txt']);
+                          if (result != null) {
+                            setStateInDialog(() {
+                              mainTextPath = result!.files.single.path;
+                            });
+                          }
+                        },
+                      )
+                    else
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          ElevatedButton.icon(
+                            icon: const Icon(Icons.text_fields),
+                            label: Text(mainTextPath == null
+                                ? 'انتخاب متن عربی'
+                                : 'متن عربی انتخاب شد'),
+                            onPressed: () async {
+                              result = await FilePicker.platform.pickFiles(
+                                  type: FileType.custom,
+                                  allowedExtensions: ['txt']);
+                              if (result != null) {
+                                setStateInDialog(() {
+                                  mainTextPath = result!.files.single.path;
+                                });
+                              }
+                            },
+                          ),
+                          ElevatedButton.icon(
+                            icon: const Icon(Icons.translate),
+                            label: Text(translationTextPath == null
+                                ? 'انتخاب متن ترجمه'
+                                : 'متن ترجمه انتخاب شد'),
+                            onPressed: () async {
+                              result = await FilePicker.platform.pickFiles(
+                                  type: FileType.custom,
+                                  allowedExtensions: ['txt']);
+                              if (result != null) {
+                                setStateInDialog(() {
+                                  translationTextPath =
+                                      result!.files.single.path;
+                                });
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
               ),
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.audiotrack),
-                label: const Text('انتخاب فایل صوتی'),
-                onPressed: () async {
-                  FilePickerResult? result =
-                      await FilePicker.platform.pickFiles(type: FileType.audio);
-                  if (result != null) {
-                    audioPath = result.files.single.path;
-                  }
-                },
-              ),
-              ElevatedButton.icon(
-                icon: const Icon(Icons.text_fields),
-                label: const Text('انتخاب فایل متنی (.txt)'),
-                onPressed: () async {
-                  FilePickerResult? result =
-                      await FilePicker.platform.pickFiles(
-                    type: FileType.custom,
-                    allowedExtensions: ['txt'],
-                  );
-                  if (result != null) {
-                    textPath = result.files.single.path;
-                  }
-                },
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('لغو')),
-            TextButton(
-              child: const Text('ساختن'),
-              onPressed: () {
-                if (titleController.text.isNotEmpty &&
-                    audioPath != null &&
-                    textPath != null) {
-                  final newProject = CalibrationProject(
-                    id: DateTime.now().millisecondsSinceEpoch.toString(),
-                    title: titleController.text,
-                    audioPath: audioPath!,
-                    textPath: textPath!,
-                  );
-                  setState(() {
-                    _projects.add(newProject);
-                  });
-                  _saveProjects();
-                  Navigator.pop(context);
-                }
-              },
-            ),
-          ],
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('لغو')),
+                TextButton(
+                  child: const Text('ساختن'),
+                  onPressed: () {
+                    bool canCreate = titleController.text.isNotEmpty &&
+                        audioPath != null &&
+                        mainTextPath != null;
+                    if (parsingMode == 'separate' &&
+                        translationTextPath == null) {
+                      // در حالت مجزا، ترجمه می‌تواند اختیاری باشد
+                    }
+                    if (canCreate) {
+                      final newProject = CalibrationProject(
+                        id: DateTime.now().millisecondsSinceEpoch.toString(),
+                        title: titleController.text,
+                        audioPath: audioPath!,
+                        textParsingMode: parsingMode,
+                        mainTextPath: mainTextPath!,
+                        translationTextPath: translationTextPath,
+                      );
+                      setState(() {
+                        _projects.add(newProject);
+                      });
+                      _saveProjects();
+                      Navigator.pop(context);
+                    }
+                  },
+                ),
+              ],
+            );
+          },
         );
       },
     );
