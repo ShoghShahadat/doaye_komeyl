@@ -18,6 +18,7 @@ dependencies:
   # معادل LottieAnimationView برای انیمیشن‌های لاتی
   lottie: ^3.0.0
   provider: ^6.1.5
+  share_plus: ^9.0.0
   # معادل SharedPreferences برای ذخیره تنظیمات کاربر
   shared_preferences: ^2.2.2
   archive: ^3.5.1

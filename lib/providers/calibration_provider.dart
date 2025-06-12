@@ -79,6 +79,45 @@ class CalibrationProvider with ChangeNotifier {
     }
   }
 
+  Future<void> importAndMergeFromJson(String jsonContent) async {
+    try {
+      _saveSnapshot(); // قبل از هر تغییری، یک عکس فوری برای Undo بگیر
+
+      final Map<String, dynamic> externalData = json.decode(jsonContent);
+
+      externalData.forEach((verseKey, wordsList) {
+        if (wordsList is List) {
+          for (var wordData in wordsList) {
+            if (wordData is Map) {
+              final wordText = wordData['متن'];
+              final timestamp = int.tryParse(wordData['شروع'].toString());
+
+              if (wordText != null && timestamp != null) {
+                // پیدا کردن ایندکس کلمه برای ساخت کلید
+                for (int i = 0; i < _linesOfWords.length; i++) {
+                  int wordIndex = _linesOfWords[i].indexOf(wordText);
+                  if (wordIndex != -1) {
+                    final key = '$i-$wordIndex';
+                    // ادغام با قانون جایگزینی
+                    _timestamps[key] = timestamp;
+                    break; // برو سراغ کلمه بعدی در فایل JSON
+                  }
+                }
+              }
+            }
+          }
+        }
+      });
+
+      await _saveState(); // ذخیره وضعیت جدید
+      notifyListeners();
+    } catch (e) {
+      print('Error merging data: $e');
+      // در صورت خطا، عملیات را به حالت قبل برمی‌گردانیم
+      undo();
+    }
+  }
+
   // --- مدیریت تاریخچه (Undo/Redo) ---
   void _saveSnapshot() {
     _undoStack.add(Map<String, int>.from(_timestamps));

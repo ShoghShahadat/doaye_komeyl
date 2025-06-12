@@ -1,3 +1,6 @@
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:file_picker/file_picker.dart';
 import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -5,6 +8,7 @@ import 'package:komeyl_app/models/calibration_project_model.dart';
 import 'package:komeyl_app/providers/calibration_provider.dart';
 import 'package:komeyl_app/screens/admin/preview_screen.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
 
 class CalibrationScreen extends StatelessWidget {
   final CalibrationProject project;
@@ -24,103 +28,13 @@ class CalibrationScreen extends StatelessWidget {
             appBar: AppBar(
               title: Text('کالیبره کردن: ${project.title}'),
               backgroundColor: Colors.deepOrange,
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.undo),
-                  tooltip: 'Undo',
-                  onPressed: provider.canUndo ? provider.undo : null,
-                ),
-                IconButton(
-                  icon: const Icon(Icons.redo),
-                  tooltip: 'Redo',
-                  onPressed: provider.canRedo ? provider.redo : null,
-                ),
-                IconButton(
-                  icon: Icon(
-                    provider.isRangeSelectionMode
-                        ? Icons.cancel
-                        : Icons.select_all,
-                    color: provider.isRangeSelectionMode
-                        ? Colors.yellow
-                        : Colors.white,
-                  ),
-                  tooltip: 'انتخاب گروهی',
-                  onPressed: provider.toggleRangeSelectionMode,
-                ),
-                IconButton(
-                  icon: const Icon(Icons.visibility),
-                  tooltip: 'پیش‌نمایش',
-                  onPressed: () {
-                    provider.audioPlayer.pause();
-
-                    int? startTime;
-                    // اگر کلمه‌ای انتخاب شده بود، زمان آن را به عنوان نقطه شروع در نظر بگیر
-                    if (provider.selectedWordKey != null &&
-                        provider.timestamps
-                            .containsKey(provider.selectedWordKey)) {
-                      startTime = provider.timestamps[provider.selectedWordKey];
-                    }
-
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => PreviewScreen(
-                          project: provider.project,
-                          timestamps: provider.timestamps,
-                          linesOfWords: provider.linesOfWords,
-                          initialSeekMilliseconds: startTime, // ارسال زمان شروع
-                        ),
-                      ),
-                    );
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.archive_outlined),
-                  tooltip: 'بسته‌بندی و خروجی گرفتن',
-                  onPressed: () async {
-                    // نمایش یک لودر کوچک
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('در حال ساخت بسته پروژه...')),
-                    );
-
-                    final Uint8List? zipData =
-                        await provider.packageProjectAsZip();
-
-                    if (zipData != null && context.mounted) {
-                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                      // استفاده از file_saver برای ذخیره فایل
-                      await FileSaver.instance.saveFile(
-                        name:
-                            '${project.title}_${DateTime.now().toIso8601String()}',
-                        bytes: zipData,
-                        ext: 'zip',
-                        mimeType: MimeType.zip,
-                      );
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('پروژه با موفقیت ذخیره شد!')),
-                      );
-                    } else if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('خطا در ساخت بسته!')),
-                      );
-                    }
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.save),
-                  onPressed: () {
-                    final jsonOutput = provider.exportTimestampsToJson();
-                    _showExportDialog(context, jsonOutput);
-                  },
-                ),
-              ],
             ),
             body: SafeArea(
               child: Column(
                 children: [
                   _PlayerControls(provider: provider),
-                  const Divider(thickness: 2),
+                  _EditingToolbar(provider: provider),
+                  const Divider(thickness: 2, height: 2),
                   Expanded(
                     child: _TextDisplay(provider: provider),
                   ),
@@ -136,41 +50,151 @@ class CalibrationScreen extends StatelessWidget {
       ),
     );
   }
+}
 
-  void _showExportDialog(BuildContext context, String jsonOutput) {
+// --- ویجت جدید: نوار ابزار ویرایش ---
+class _EditingToolbar extends StatelessWidget {
+  final CalibrationProvider provider;
+  const _EditingToolbar({required this.provider});
+
+  void _showCollaborationDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('فایل خروجی JSON'),
-          content: Scrollbar(
-            child: SingleChildScrollView(
-              child: Text(jsonOutput,
-                  style: const TextStyle(fontFamily: 'monospace')),
-            ),
+      builder: (ctx) => AlertDialog(
+        title: const Text('همکاری و اشتراک‌گذاری'),
+        content: const Text('یکی از گزینه‌های زیر را انتخاب کنید:'),
+        actions: [
+          TextButton.icon(
+            icon: const Icon(Icons.file_upload_outlined),
+            label: const Text('ورود فایل کالیبره (.json)'),
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              final result = await FilePicker.platform.pickFiles(
+                  type: FileType.custom, allowedExtensions: ['json']);
+              if (result != null && result.files.single.path != null) {
+                final file = File(result.files.single.path!);
+                final jsonContent = await file.readAsString();
+                await provider.importAndMergeFromJson(jsonContent);
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('فایل با موفقیت ادغام شد!')),
+                  );
+                }
+              }
+            },
           ),
-          actions: [
-            TextButton(
-              child: const Text('کپی در کلیپ‌بورد'),
-              onPressed: () {
-                Clipboard.setData(ClipboardData(text: jsonOutput));
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('متن JSON کپی شد!')),
-                );
-              },
+          TextButton.icon(
+            icon: const Icon(Icons.share_outlined),
+            label: const Text('اشتراک‌گذاری کالیبره من'),
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              final jsonToShare = provider.exportTimestampsToJson();
+              Share.share(jsonToShare,
+                  subject: 'فایل کالیبراسیون برای ${provider.project.title}');
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _exportPackage(BuildContext context) async {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('در حال ساخت بسته پروژه...')),
+    );
+    final Uint8List? zipData = await provider.packageProjectAsZip();
+    if (zipData != null && context.mounted) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      await FileSaver.instance.saveFile(
+        name:
+            '${provider.project.title}_${DateTime.now().millisecondsSinceEpoch}',
+        bytes: zipData,
+        ext: 'zip',
+        mimeType: MimeType.zip,
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('پروژه با موفقیت ذخیره شد!')),
+      );
+    } else if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('خطا در ساخت بسته!')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+      color: Colors.grey.shade200,
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        spacing: 8.0,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.undo),
+            tooltip: 'Undo',
+            onPressed: provider.canUndo ? provider.undo : null,
+          ),
+          IconButton(
+            icon: const Icon(Icons.redo),
+            tooltip: 'Redo',
+            onPressed: provider.canRedo ? provider.redo : null,
+          ),
+          const VerticalDivider(),
+          IconButton(
+            icon: Icon(
+              provider.isRangeSelectionMode
+                  ? Icons.cancel_outlined
+                  : Icons.select_all,
+              color: provider.isRangeSelectionMode
+                  ? Colors.blue.shade700
+                  : Theme.of(context).iconTheme.color,
             ),
-            TextButton(
-              child: const Text('بستن'),
-              onPressed: () => Navigator.of(context).pop(),
-            ),
-          ],
-        );
-      },
+            tooltip: 'انتخاب گروهی',
+            onPressed: provider.toggleRangeSelectionMode,
+          ),
+          const VerticalDivider(),
+          IconButton(
+            icon: const Icon(Icons.visibility_outlined),
+            tooltip: 'پیش‌نمایش',
+            onPressed: () {
+              provider.audioPlayer.pause();
+              int? startTime;
+              if (provider.selectedWordKey != null &&
+                  provider.timestamps.containsKey(provider.selectedWordKey)) {
+                startTime = provider.timestamps[provider.selectedWordKey];
+              }
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => PreviewScreen(
+                    project: provider.project,
+                    timestamps: provider.timestamps,
+                    linesOfWords: provider.linesOfWords,
+                    initialSeekMilliseconds: startTime,
+                  ),
+                ),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.group_work_outlined, color: Colors.purple),
+            tooltip: 'ورود و اشتراک‌گذاری',
+            onPressed: () => _showCollaborationDialog(context),
+          ),
+          IconButton(
+            icon: const Icon(Icons.archive_outlined, color: Colors.green),
+            tooltip: 'بسته‌بندی و خروجی گرفتن',
+            onPressed: () => _exportPackage(context),
+          ),
+        ],
+      ),
     );
   }
 }
 
-// --- ویجت پنل تنظیم دقیق با رفع باگ و دکمه جدید ---
+// --- سایر ویجت‌های این صفحه ---
+
 class _FineTuneControls extends StatelessWidget {
   final CalibrationProvider provider;
   const _FineTuneControls({required this.provider});
@@ -188,31 +212,31 @@ class _FineTuneControls extends StatelessWidget {
       child: Column(
         children: [
           Text('تنظیم دقیق کلمه انتخاب شده: $timestamp ms'),
-          // ١. برای حل مشکل Overflow، ردیف دکمه‌ها را در یک ویجت اسکرول افقی قرار می‌دهیم
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _buildNudgeButton(provider, '-100ms', -100),
+                ElevatedButton(
+                    child: const Text('-100ms'),
+                    onPressed: () => provider.nudgeTimestamp(-100)),
                 const SizedBox(width: 4),
-                _buildNudgeButton(provider, '-10ms', -10),
+                ElevatedButton(
+                    child: const Text('-10ms'),
+                    onPressed: () => provider.nudgeTimestamp(-10)),
                 const SizedBox(width: 8),
                 IconButton(
                   icon: const Icon(Icons.delete_forever_rounded,
                       color: Colors.red),
                   tooltip: 'حذف زمان‌بندی این کلمه',
-                  onPressed: () {
-                    provider.deleteSelectedTimestamp();
-                  },
+                  onPressed: provider.deleteSelectedTimestamp,
                 ),
                 IconButton(
                   icon: const Icon(Icons.play_circle_outline,
                       color: Colors.deepOrange),
                   tooltip: 'پخش از این نقطه',
-                  onPressed: () => provider.playFromSelected(),
+                  onPressed: provider.playFromSelected,
                 ),
-                // ٢. دکمه مکث جدید برای راحتی کاربر اضافه شد
                 IconButton(
                   icon: const Icon(Icons.pause_circle_outline,
                       color: Colors.deepOrange),
@@ -220,9 +244,13 @@ class _FineTuneControls extends StatelessWidget {
                   onPressed: () => provider.audioPlayer.pause(),
                 ),
                 const SizedBox(width: 8),
-                _buildNudgeButton(provider, '+10ms', 10),
+                ElevatedButton(
+                    child: const Text('+10ms'),
+                    onPressed: () => provider.nudgeTimestamp(10)),
                 const SizedBox(width: 4),
-                _buildNudgeButton(provider, '+100ms', 100),
+                ElevatedButton(
+                    child: const Text('+100ms'),
+                    onPressed: () => provider.nudgeTimestamp(100)),
               ],
             ),
           ),
@@ -230,17 +258,7 @@ class _FineTuneControls extends StatelessWidget {
       ),
     );
   }
-
-  Widget _buildNudgeButton(
-      CalibrationProvider provider, String label, int amount) {
-    return ElevatedButton(
-      child: Text(label),
-      onPressed: () => provider.nudgeTimestamp(amount),
-    );
-  }
 }
-
-// --- سایر ویجت‌ها بدون تغییر باقی می‌مانند ---
 
 class _RangeSelectionControls extends StatelessWidget {
   final CalibrationProvider provider;
