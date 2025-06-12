@@ -41,7 +41,7 @@ class MyApp extends StatelessWidget {
             fontFamily: 'Nabi',
             useMaterial3: true,
           ),
-          home: const SplashScreen(),
+          home: const ModernSplashScreen(),
         );
       },
     );

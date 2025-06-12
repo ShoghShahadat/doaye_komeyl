@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'dart:ui';
+import 'dart:math' as math;
 import 'package:komeyl_app/providers/prayer_provider.dart';
 import 'package:komeyl_app/providers/settings_provider.dart';
 import 'package:komeyl_app/widgets/app_drawer.dart';
@@ -8,8 +11,74 @@ import 'package:komeyl_app/widgets/settings_sheet.dart';
 import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
 
-class MainScreen extends StatelessWidget {
-  const MainScreen({super.key});
+class ModernMainScreen extends StatefulWidget {
+  const ModernMainScreen({super.key});
+
+  @override
+  State<ModernMainScreen> createState() => _ModernMainScreenState();
+}
+
+class _ModernMainScreenState extends State<ModernMainScreen>
+    with TickerProviderStateMixin {
+  late AnimationController _appBarAnimationController;
+  late AnimationController _fabAnimationController;
+  late AnimationController _tabAnimationController;
+  late Animation<double> _appBarAnimation;
+  late Animation<double> _fabScaleAnimation;
+  late Animation<double> _tabSlideAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _appBarAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+    _fabAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+    _tabAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+
+    _appBarAnimation = Tween<double>(
+      begin: -100,
+      end: 0,
+    ).animate(CurvedAnimation(
+      parent: _appBarAnimationController,
+      curve: Curves.easeOutCubic,
+    ));
+
+    _fabScaleAnimation = Tween<double>(
+      begin: 0,
+      end: 1,
+    ).animate(CurvedAnimation(
+      parent: _fabAnimationController,
+      curve: Curves.elasticOut,
+    ));
+
+    _tabSlideAnimation = Tween<double>(
+      begin: 50,
+      end: 0,
+    ).animate(CurvedAnimation(
+      parent: _tabAnimationController,
+      curve: Curves.easeOutBack,
+    ));
+
+    _appBarAnimationController.forward();
+    _fabAnimationController.forward();
+    _tabAnimationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _appBarAnimationController.dispose();
+    _fabAnimationController.dispose();
+    _tabAnimationController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,89 +86,330 @@ class MainScreen extends StatelessWidget {
       length: 2,
       child: Scaffold(
         drawer: const AppDrawer(),
-        appBar: AppBar(
-          title: Text(
-            'دعای کمیل',
-            style: TextStyle(
-              color: Colors.white,
-              fontFamily: 'Nabi',
-              fontSize: 22,
+        body: Stack(
+          children: [
+            // پس‌زمینه گرادیان
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Theme.of(context).primaryColor.withOpacity(0.05),
+                    Colors.white,
+                  ],
+                ),
+              ),
             ),
+            // محتوای اصلی
+            Column(
+              children: [
+                // AppBar سفارشی
+                AnimatedBuilder(
+                  animation: _appBarAnimation,
+                  builder: (context, child) {
+                    return Transform.translate(
+                      offset: Offset(0, _appBarAnimation.value),
+                      child: _buildModernAppBar(context),
+                    );
+                  },
+                ),
+                // کنترل‌های پخش
+                const ModernPlayerControlsWidget(),
+                // TabBar
+                AnimatedBuilder(
+                  animation: _tabSlideAnimation,
+                  builder: (context, child) {
+                    return Transform.translate(
+                      offset: Offset(0, _tabSlideAnimation.value),
+                      child: _buildModernTabBar(context),
+                    );
+                  },
+                ),
+                // TabBarView
+                const Expanded(
+                  child: TabBarView(
+                    physics: NeverScrollableScrollPhysics(),
+                    children: [
+                      PrayerListView(),
+                      ModernPrayerSingleView(),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            // دکمه تنظیمات شناور
+            _buildFloatingSettingsButton(context),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildModernAppBar(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Theme.of(context).primaryColor.withOpacity(0.1),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
-          backgroundColor: Theme.of(context).primaryColor,
-          elevation: 4.0,
-          iconTheme: const IconThemeData(color: Colors.white),
-          actions: [
-            Consumer<SettingsProvider>(
-              builder: (context, settings, child) {
-                return IconButton(
-                  icon: const Icon(Icons.settings_rounded),
-                  onPressed: () {
-                    showModalBottomSheet(
-                      context: context,
-                      builder: (_) {
-                        return ChangeNotifierProvider.value(
-                          value: settings,
-                          child: const SettingsSheet(),
+        ],
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Container(
+          height: 70,
+          padding: const EdgeInsets.symmetric(horizontal: 8),
+          child: Row(
+            children: [
+              // دکمه منو
+              IconButton(
+                icon: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.menu_rounded,
+                    color: Theme.of(context).primaryColor,
+                  ),
+                ),
+                onPressed: () {
+                  HapticFeedback.lightImpact();
+                  Scaffold.of(context).openDrawer();
+                },
+              ),
+              // عنوان و لوگو
+              Expanded(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    TweenAnimationBuilder<double>(
+                      duration: const Duration(milliseconds: 1200),
+                      tween: Tween(begin: 0, end: 1),
+                      curve: Curves.elasticOut,
+                      builder: (context, value, child) {
+                        return Transform.scale(
+                          scale: value,
+                          child: Container(
+                            width: 45,
+                            height: 45,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Theme.of(context).primaryColor,
+                                  Theme.of(context)
+                                      .primaryColor
+                                      .withOpacity(0.7),
+                                ],
+                              ),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Theme.of(context)
+                                      .primaryColor
+                                      .withOpacity(0.3),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Center(
+                              child: Text(
+                                'د',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Alhura',
+                                ),
+                              ),
+                            ),
+                          ),
                         );
                       },
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'دعای کمیل',
+                          style: TextStyle(
+                            color: Theme.of(context).primaryColor,
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Alhura',
+                          ),
+                        ),
+                        Text(
+                          'با صدای استاد علیفانی',
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                            fontFamily: 'Nabi',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 56), // برای متقارن بودن
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildModernTabBar(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      height: 54,
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(27),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: TabBar(
+        indicator: BoxDecoration(
+          borderRadius: BorderRadius.circular(25),
+          color: Theme.of(context).primaryColor,
+          boxShadow: [
+            BoxShadow(
+              color: Theme.of(context).primaryColor.withOpacity(0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        indicatorSize: TabBarIndicatorSize.tab,
+        dividerColor: Colors.transparent,
+        labelColor: Colors.white,
+        unselectedLabelColor: Colors.grey[600],
+        labelStyle: const TextStyle(
+          fontFamily: 'Nabi',
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+        ),
+        unselectedLabelStyle: const TextStyle(
+          fontFamily: 'Nabi',
+          fontSize: 16,
+          fontWeight: FontWeight.normal,
+        ),
+        splashBorderRadius: BorderRadius.circular(25),
+        tabs: const [
+          Tab(text: 'نمای لیست'),
+          Tab(text: 'نمای تک صفحه'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFloatingSettingsButton(BuildContext context) {
+    return Positioned(
+      bottom: 20,
+      left: 20,
+      child: ScaleTransition(
+        scale: _fabScaleAnimation,
+        child: Consumer<SettingsProvider>(
+          builder: (context, settings, child) {
+            return FloatingActionButton(
+              heroTag: 'settings',
+              backgroundColor: Theme.of(context).primaryColor,
+              elevation: 8,
+              onPressed: () {
+                HapticFeedback.mediumImpact();
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (_) {
+                    return ChangeNotifierProvider.value(
+                      value: settings,
+                      child: const ModernSettingsSheet(),
                     );
                   },
                 );
               },
-            ),
-          ],
-          bottom: const TabBar(
-            indicatorColor: Colors.white,
-            indicatorWeight: 3,
-            labelStyle: TextStyle(fontFamily: 'Nabi', fontSize: 16),
-            labelColor: Colors.white,
-            unselectedLabelColor: Colors.white70,
-            tabs: [
-              Tab(text: 'لیستی'),
-              Tab(text: 'متن تنها'),
-            ],
-          ),
-        ),
-        body: const Column(
-          children: [
-            PlayerControlsWidget(),
-            Expanded(
-              child: TabBarView(
-                physics: NeverScrollableScrollPhysics(),
-                children: [
-                  PrayerListView(),
-                  PrayerSingleView(),
-                ],
+              child: const Icon(
+                Icons.settings_rounded,
+                color: Colors.white,
               ),
-            ),
-          ],
+            );
+          },
         ),
       ),
     );
   }
 }
 
-class PlayerControlsWidget extends StatefulWidget {
-  const PlayerControlsWidget({super.key});
+class ModernPlayerControlsWidget extends StatefulWidget {
+  const ModernPlayerControlsWidget({super.key});
 
   @override
-  State<PlayerControlsWidget> createState() => _PlayerControlsWidgetState();
+  State<ModernPlayerControlsWidget> createState() =>
+      _ModernPlayerControlsWidgetState();
 }
 
-class _PlayerControlsWidgetState extends State<PlayerControlsWidget>
+class _ModernPlayerControlsWidgetState extends State<ModernPlayerControlsWidget>
     with TickerProviderStateMixin {
-  late final AnimationController _lottieController;
+  late AnimationController _lottieController;
+  late AnimationController _expandController;
+  late AnimationController _pulseController;
+  late Animation<double> _expandAnimation;
+  late Animation<double> _pulseAnimation;
+  bool _isExpanded = true;
 
   @override
   void initState() {
     super.initState();
     _lottieController = AnimationController(vsync: this);
+    _expandController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _pulseController = AnimationController(
+      duration: const Duration(seconds: 2),
+      vsync: this,
+    )..repeat();
+
+    _expandAnimation = Tween<double>(
+      begin: 0,
+      end: 1,
+    ).animate(CurvedAnimation(
+      parent: _expandController,
+      curve: Curves.easeInOutCubic,
+    ));
+
+    _pulseAnimation = Tween<double>(
+      begin: 1,
+      end: 1.1,
+    ).animate(CurvedAnimation(
+      parent: _pulseController,
+      curve: Curves.easeInOut,
+    ));
+
+    _expandController.forward();
   }
 
   @override
   void dispose() {
     _lottieController.dispose();
+    _expandController.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
@@ -108,110 +418,294 @@ class _PlayerControlsWidgetState extends State<PlayerControlsWidget>
     final prayerProvider = Provider.of<PrayerProvider>(context);
     final settingsProvider = Provider.of<SettingsProvider>(context);
 
-    // منطق جدید کنترل انیمیشن
     if (prayerProvider.isPlaying && !_lottieController.isAnimating) {
       _lottieController.repeat();
     } else if (!prayerProvider.isPlaying && _lottieController.isAnimating) {
-      // ٤. از reset() استفاده می‌کنیم تا انیمیشن متوقف و به فریم اول بازگردد
       _lottieController.reset();
     }
 
-    String formatDuration(Duration d) {
-      if (d.inHours > 0) return d.toString().split('.').first.padLeft(8, "0");
-      return d.toString().split('.').first.padLeft(8, "0").substring(3);
-    }
-
-    final sliderMax = prayerProvider.totalDuration.inMilliseconds.toDouble();
-    final sliderValue = prayerProvider.currentPosition.inMilliseconds
-        .toDouble()
-        .clamp(0.0, sliderMax);
-
     return Visibility(
       visible: settingsProvider.showTimeline,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8.0),
-        color: Theme.of(context).primaryColor.withOpacity(0.95),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Row(
-                children: [
-                  Text(formatDuration(prayerProvider.currentPosition),
-                      style:
-                          const TextStyle(color: Colors.white, fontSize: 14)),
-                  Expanded(
-                    child: Slider(
-                      value: sliderValue,
-                      min: 0.0,
-                      max: sliderMax > 0 ? sliderMax : 1.0,
-                      onChanged: (value) {
-                        prayerProvider
-                            .seek(Duration(milliseconds: value.toInt()));
-                      },
-                      activeColor: Color.lerp(
-                          settingsProvider.appColor, Colors.black, 0.3),
-                      inactiveColor: Colors.white.withOpacity(0.3),
-                    ),
-                  ),
-                  Text(formatDuration(prayerProvider.totalDuration),
-                      style:
-                          const TextStyle(color: Colors.white, fontSize: 14)),
-                ],
-              ),
+      child: AnimatedBuilder(
+        animation: _expandAnimation,
+        builder: (context, child) {
+          return Container(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: Theme.of(context).primaryColor.withOpacity(0.1),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
-            SizedBox(
-              height: 48,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  IconButton(
-                    icon: Icon(
-                      prayerProvider.isPlaying
-                          ? Icons.pause_circle_filled_rounded
-                          : Icons.play_circle_filled_rounded,
-                      color: Colors.white,
-                      size: 42,
-                    ),
-                    onPressed: () {
-                      prayerProvider.isPlaying
-                          ? prayerProvider.pause()
-                          : prayerProvider.play();
-                    },
-                  ),
-                  Align(
-                    alignment: const Alignment(0.6, 0.0),
-                    child: Visibility(
-                      // ٣. ویجت Visibility دیگر به isPlaying وابسته نیست
-                      visible: settingsProvider.showEqualizer,
-                      child: Lottie.asset(
-                        'assets/lottie/equalizer.json',
-                        width: 250, // ٢. اندازه به مقدار مناسب تغییر کرد
-                        height: 80,
-                        controller: _lottieController,
-                        onLoaded: (composition) {
-                          _lottieController.duration = composition.duration;
-                        },
-                        delegates: LottieDelegates(
-                          values: [
-                            ValueDelegate.color(
-                              // در اینجا '**' به این معنی است که تمام لایه‌ها و اَشکال را هدف قرار می‌دهیم
-                              // شما می‌توانید برای هدف قرار دادن یک لایه یا شکل خاص، نام آن را مشخص کنید
-                              const ['**'],
-                              value: Colors.white,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  height: _isExpanded ? 140 : 70,
+                  child: Column(
+                    children: [
+                      // بخش اصلی کنترل
+                      Container(
+                        height: 70,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Row(
+                          children: [
+                            // دکمه پلی/پاز
+                            AnimatedBuilder(
+                              animation: _pulseAnimation,
+                              builder: (context, child) {
+                                return Transform.scale(
+                                  scale: prayerProvider.isPlaying
+                                      ? _pulseAnimation.value
+                                      : 1.0,
+                                  child: Container(
+                                    width: 50,
+                                    height: 50,
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          Theme.of(context).primaryColor,
+                                          Theme.of(context)
+                                              .primaryColor
+                                              .withOpacity(0.8),
+                                        ],
+                                      ),
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Theme.of(context)
+                                              .primaryColor
+                                              .withOpacity(0.3),
+                                          blurRadius: 12,
+                                          offset: const Offset(0, 4),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Material(
+                                      color: Colors.transparent,
+                                      child: InkWell(
+                                        onTap: () {
+                                          HapticFeedback.lightImpact();
+                                          prayerProvider.isPlaying
+                                              ? prayerProvider.pause()
+                                              : prayerProvider.play();
+                                        },
+                                        borderRadius: BorderRadius.circular(25),
+                                        child: Icon(
+                                          prayerProvider.isPlaying
+                                              ? Icons.pause_rounded
+                                              : Icons.play_arrow_rounded,
+                                          color: Colors.white,
+                                          size: 30,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                            const SizedBox(width: 16),
+                            // اطلاعات زمان
+                            Expanded(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Text(
+                                        _formatDuration(
+                                            prayerProvider.currentPosition),
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: Theme.of(context).primaryColor,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          'از ${_formatDuration(prayerProvider.totalDuration)}',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey[600],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 8),
+                                  // نوار پیشرفت
+                                  _buildModernProgressBar(prayerProvider),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            // اکولایزر
+                            if (settingsProvider.showEqualizer)
+                              Visibility(
+                                visible: prayerProvider.isPlaying,
+                                child: SizedBox(
+                                  width: 60,
+                                  height: 40,
+                                  child: Lottie.asset(
+                                    'assets/lottie/equalizer.json',
+                                    controller: _lottieController,
+                                    onLoaded: (composition) {
+                                      _lottieController.duration =
+                                          composition.duration;
+                                    },
+                                    delegates: LottieDelegates(
+                                      values: [
+                                        ValueDelegate.color(
+                                          const ['**'],
+                                          value: Theme.of(context).primaryColor,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            // دکمه expand/collapse
+                            IconButton(
+                              icon: AnimatedRotation(
+                                turns: _isExpanded ? 0.5 : 0,
+                                duration: const Duration(milliseconds: 300),
+                                child: Icon(
+                                  Icons.expand_more_rounded,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _isExpanded = !_isExpanded;
+                                });
+                              },
                             ),
                           ],
                         ),
                       ),
-                    ),
+                      // اسلایدر کامل
+                      if (_isExpanded)
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            child: Row(
+                              children: [
+                                Text(
+                                  _formatDuration(
+                                      prayerProvider.currentPosition),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                                Expanded(
+                                  child: SliderTheme(
+                                    data: SliderTheme.of(context).copyWith(
+                                      activeTrackColor:
+                                          Theme.of(context).primaryColor,
+                                      inactiveTrackColor: Colors.grey[300],
+                                      thumbColor:
+                                          Theme.of(context).primaryColor,
+                                      overlayColor: Theme.of(context)
+                                          .primaryColor
+                                          .withOpacity(0.2),
+                                      trackHeight: 4,
+                                      thumbShape: const RoundSliderThumbShape(
+                                          enabledThumbRadius: 8),
+                                      overlayShape:
+                                          const RoundSliderOverlayShape(
+                                              overlayRadius: 16),
+                                    ),
+                                    child: Slider(
+                                      value: prayerProvider
+                                          .currentPosition.inMilliseconds
+                                          .toDouble(),
+                                      min: 0,
+                                      max: prayerProvider
+                                          .totalDuration.inMilliseconds
+                                          .toDouble(),
+                                      onChanged: (value) {
+                                        prayerProvider.seek(Duration(
+                                            milliseconds: value.toInt()));
+                                      },
+                                    ),
+                                  ),
+                                ),
+                                Text(
+                                  _formatDuration(prayerProvider.totalDuration),
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildModernProgressBar(PrayerProvider prayerProvider) {
+    final progress = prayerProvider.totalDuration.inMilliseconds > 0
+        ? prayerProvider.currentPosition.inMilliseconds /
+            prayerProvider.totalDuration.inMilliseconds
+        : 0.0;
+
+    return Container(
+      height: 6,
+      decoration: BoxDecoration(
+        color: Colors.grey[200],
+        borderRadius: BorderRadius.circular(3),
+      ),
+      child: Stack(
+        children: [
+          FractionallySizedBox(
+            widthFactor: progress,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Theme.of(context).primaryColor,
+                    Theme.of(context).primaryColor.withOpacity(0.7),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(3),
+                boxShadow: [
+                  BoxShadow(
+                    color: Theme.of(context).primaryColor.withOpacity(0.3),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
+  }
+
+  String _formatDuration(Duration d) {
+    if (d.inHours > 0) {
+      return d.toString().split('.').first.padLeft(8, "0");
+    }
+    return d.toString().split('.').first.padLeft(8, "0").substring(3);
   }
 }
