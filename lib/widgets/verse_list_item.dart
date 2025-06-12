@@ -9,13 +9,15 @@ import 'package:provider/provider.dart';
 class ModernVerseListItem extends StatefulWidget {
   final Verse verse;
   final int index;
-  final bool isVisible;
+  // ١. حذف پراپرتی غیر ضروری isVisible
+  // final bool isVisible;
 
   const ModernVerseListItem({
+    // ٢. افزودن کلید شناسایی (Key) برای پایداری بیشتر در لیست
     super.key,
     required this.verse,
     required this.index,
-    this.isVisible = true,
+    // this.isVisible = true,
   });
 
   @override
@@ -33,7 +35,7 @@ class _ModernVerseListItemState extends State<ModernVerseListItem>
   void initState() {
     super.initState();
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 400),
       vsync: this,
     );
 
@@ -53,9 +55,9 @@ class _ModernVerseListItemState extends State<ModernVerseListItem>
       curve: Curves.easeIn,
     ));
 
-    if (widget.isVisible) {
-      _animationController.forward();
-    }
+    // ٣. اجرای بدون قید و شرط انیمیشن
+    // هر زمان که ویجت ساخته شود، انیمیشن آن اجرا می‌شود.
+    _animationController.forward();
   }
 
   @override
@@ -64,12 +66,19 @@ class _ModernVerseListItemState extends State<ModernVerseListItem>
     super.dispose();
   }
 
+  void _handleTap(PrayerProvider prayerProvider) {
+    HapticFeedback.lightImpact();
+    prayerProvider.seek(Duration(milliseconds: widget.verse.startTime));
+    if (!prayerProvider.isPlaying) {
+      prayerProvider.play();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final prayerProvider = Provider.of<PrayerProvider>(context);
     final settingsProvider = Provider.of<SettingsProvider>(context);
     final bool isCurrent = prayerProvider.currentVerseIndex == widget.index;
-    final bool isPassed = prayerProvider.currentVerseIndex > widget.index;
 
     final verseKey = 'آیه${widget.verse.id}';
     final List<WordTiming>? currentWordTimings =
@@ -88,31 +97,23 @@ class _ModernVerseListItemState extends State<ModernVerseListItem>
               onTapCancel: () => setState(() => _isPressed = false),
               onTap: () => _handleTap(prayerProvider),
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOut,
                 margin: EdgeInsets.symmetric(
                   horizontal: isCurrent ? 12.0 : 16.0,
                   vertical: isCurrent ? 12.0 : 8.0,
                 ),
-                transform: Matrix4.identity()
-                  ..scale(_isPressed ? 0.98 : 1.0)
-                  ..translate(0.0, isCurrent ? -2.0 : 0.0),
+                transform: Matrix4.identity()..scale(_isPressed ? 0.98 : 1.0),
                 child: Stack(
+                  clipBehavior: Clip.none, // اجازه می‌دهد سایه بیرون بزند
                   children: [
-                    // کارت اصلی
-                    _buildMainCard(
-                      context,
-                      isCurrent,
-                      isPassed,
-                      settingsProvider,
-                      currentWordTimings,
-                      prayerProvider.currentWordIndex,
-                    ),
-                    // اورلی گرادیان برای حالت فعلی
-                    if (isCurrent) _buildActiveOverlay(context),
-                    // شماره آیه
-                    _buildVerseNumber(context, isCurrent, isPassed),
-                    // نشانگر پخش
-                    if (isCurrent) _buildPlayingIndicator(context),
+                    _buildMainCard(context, isCurrent, settingsProvider,
+                        currentWordTimings, prayerProvider.currentWordIndex),
+                    if (isCurrent)
+                      _buildActiveOverlay(context, settingsProvider),
+                    _buildVerseNumber(context, isCurrent, settingsProvider),
+                    if (isCurrent && prayerProvider.isPlaying)
+                      _buildPlayingIndicator(context, settingsProvider),
                   ],
                 ),
               ),
@@ -126,79 +127,61 @@ class _ModernVerseListItemState extends State<ModernVerseListItem>
   Widget _buildMainCard(
     BuildContext context,
     bool isCurrent,
-    bool isPassed,
     SettingsProvider settingsProvider,
     List<WordTiming>? wordTimings,
     int currentWordIndex,
   ) {
+    final prayerProvider = Provider.of<PrayerProvider>(context, listen: false);
+    final bool isPassed = prayerProvider.currentVerseIndex > widget.index;
+
     return Container(
       decoration: BoxDecoration(
-        color: isCurrent
-            ? Colors.white
-            : isPassed
-                ? Colors.white.withOpacity(0.95)
-                : Colors.white,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           if (isCurrent)
             BoxShadow(
-              color: settingsProvider.appColor.withOpacity(0.3),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-              spreadRadius: 0,
+              color: settingsProvider.appColor.withOpacity(0.25),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
             )
           else
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withOpacity(0.07),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
         ],
         border: Border.all(
           color: isCurrent
-              ? settingsProvider.appColor.withOpacity(0.3)
-              : Colors.transparent,
-          width: 2,
+              ? settingsProvider.appColor.withOpacity(0.5)
+              : Colors.grey.shade200,
+          width: isCurrent ? 2 : 1,
         ),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(18),
-        child: Material(
-          color: Colors.transparent,
-          child: Padding(
-            padding: EdgeInsets.all(isCurrent ? 24.0 : 20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 8),
-                // متن عربی
-                _buildArabicText(
-                  context,
-                  isCurrent,
-                  isPassed,
-                  settingsProvider,
-                  wordTimings,
-                  currentWordIndex,
-                ),
-                const SizedBox(height: 20),
-                // خط جداکننده زیبا
-                _buildDivider(context, isCurrent, settingsProvider),
-                const SizedBox(height: 20),
-                // ترجمه فارسی
-                _buildTranslationText(
-                  context,
-                  isCurrent,
-                  isPassed,
-                  settingsProvider,
-                ),
-              ],
-            ),
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(20, isCurrent ? 32 : 20, 20, 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 8),
+              _buildArabicText(context, isCurrent, isPassed, settingsProvider,
+                  wordTimings, currentWordIndex),
+              const SizedBox(height: 16),
+              _buildDivider(context, isCurrent, settingsProvider),
+              const SizedBox(height: 16),
+              _buildTranslationText(
+                  context, isCurrent, isPassed, settingsProvider),
+            ],
           ),
         ),
       ),
     );
   }
 
+  // --- کد اصلاح‌شده و بدون باگ برای نمایش متن عربی ---
   Widget _buildArabicText(
     BuildContext context,
     bool isCurrent,
@@ -207,17 +190,25 @@ class _ModernVerseListItemState extends State<ModernVerseListItem>
     List<WordTiming>? wordTimings,
     int currentWordIndex,
   ) {
+    // اگر آیتم فعلی است و زمان‌بندی کلمات را دارد، RichText را نمایش بده
     if (isCurrent && wordTimings != null) {
       return RichText(
         textAlign: TextAlign.center,
         textDirection: TextDirection.rtl,
         text: _buildRichTextVerse(
-          context,
-          wordTimings,
-          currentWordIndex,
-          settingsProvider,
-        ),
+            context, wordTimings, currentWordIndex, settingsProvider),
       );
+    }
+
+    // در غیر این صورت، از Text ساده با استایل‌دهی کامل و بدون باگ استفاده کن
+    Color textColor;
+    if (isCurrent) {
+      // این حالت fallback برای زمانی است که isCurrent=true اما wordTimings=null
+      textColor = Colors.black87;
+    } else if (isPassed) {
+      textColor = settingsProvider.appColor;
+    } else {
+      textColor = Colors.grey.shade600;
     }
 
     return Text(
@@ -225,9 +216,7 @@ class _ModernVerseListItemState extends State<ModernVerseListItem>
       style: TextStyle(
         fontFamily: 'Alhura',
         fontSize: settingsProvider.arabicFontSize,
-        color: isPassed
-            ? settingsProvider.appColor.withOpacity(0.9)
-            : Colors.grey.shade700,
+        color: textColor,
         height: 1.8,
         letterSpacing: 0.5,
       ),
@@ -236,25 +225,25 @@ class _ModernVerseListItemState extends State<ModernVerseListItem>
     );
   }
 
-  Widget _buildTranslationText(
-    BuildContext context,
-    bool isCurrent,
-    bool isPassed,
-    SettingsProvider settingsProvider,
-  ) {
+  Widget _buildTranslationText(BuildContext context, bool isCurrent,
+      bool isPassed, SettingsProvider settingsProvider) {
+    Color textColor;
+    if (isCurrent) {
+      textColor = Colors.black;
+    } else if (isPassed) {
+      textColor = Colors.grey.shade700;
+    } else {
+      textColor = Colors.grey.shade500;
+    }
+
     return AnimatedDefaultTextStyle(
       duration: const Duration(milliseconds: 300),
       style: TextStyle(
         fontFamily: 'Nabi',
-        fontSize: isCurrent
-            ? settingsProvider.translationFontSize + 1
-            : settingsProvider.translationFontSize,
-        color: isCurrent
-            ? Colors.grey.shade800
-            : isPassed
-                ? Colors.grey.shade700
-                : Colors.grey.shade600,
+        fontSize: settingsProvider.translationFontSize,
+        color: textColor,
         height: 1.6,
+        fontWeight: isCurrent ? FontWeight.w600 : FontWeight.normal,
       ),
       child: Text(
         widget.verse.translation,
@@ -263,151 +252,14 @@ class _ModernVerseListItemState extends State<ModernVerseListItem>
     );
   }
 
-  Widget _buildDivider(
-    BuildContext context,
-    bool isCurrent,
-    SettingsProvider settingsProvider,
-  ) {
-    return Center(
-      child: Container(
-        width: isCurrent ? 80 : 60,
-        height: 2,
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: isCurrent
-                ? [
-                    Colors.transparent,
-                    settingsProvider.appColor,
-                    Colors.transparent,
-                  ]
-                : [
-                    Colors.transparent,
-                    Colors.grey.shade300,
-                    Colors.transparent,
-                  ],
-          ),
-          borderRadius: BorderRadius.circular(1),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActiveOverlay(BuildContext context) {
-    return Positioned.fill(
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Provider.of<SettingsProvider>(context).appColor.withOpacity(0.05),
-              Colors.transparent,
-              Provider.of<SettingsProvider>(context).appColor.withOpacity(0.03),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildVerseNumber(
-      BuildContext context, bool isCurrent, bool isPassed) {
-    final settingsProvider = Provider.of<SettingsProvider>(context);
-
-    return Positioned(
-      top: 12,
-      right: 12,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: isCurrent
-              ? settingsProvider.appColor
-              : isPassed
-                  ? settingsProvider.appColor.withOpacity(0.1)
-                  : Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: isCurrent
-              ? [
-                  BoxShadow(
-                    color: settingsProvider.appColor.withOpacity(0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'آیه',
-              style: TextStyle(
-                fontFamily: 'Nabi',
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: isCurrent
-                    ? Colors.white
-                    : isPassed
-                        ? settingsProvider.appColor
-                        : Colors.grey.shade600,
-              ),
-            ),
-            const SizedBox(width: 4),
-            Text(
-              widget.verse.id,
-              style: TextStyle(
-                fontFamily: 'Nabi',
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: isCurrent
-                    ? Colors.white
-                    : isPassed
-                        ? settingsProvider.appColor
-                        : Colors.grey.shade700,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPlayingIndicator(BuildContext context) {
-    return Positioned(
-      top: 12,
-      left: 12,
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: _PlayingAnimation(
-          color: Provider.of<SettingsProvider>(context).appColor,
-        ),
-      ),
-    );
-  }
-
   TextSpan _buildRichTextVerse(
-    BuildContext context,
-    List<WordTiming> wordTimings,
-    int currentWordIndex,
-    SettingsProvider settingsProvider,
-  ) {
+      BuildContext context,
+      List<WordTiming> wordTimings,
+      int currentWordIndex,
+      SettingsProvider settingsProvider) {
     final Color readColor = settingsProvider.appColor;
-    const Color readingColor =
-        Color(0xFFE91E63); // رنگ صورتی زیبا برای کلمه در حال خواندن
-    const Color specialWordColor = Color(0xFF1F9671);
+    final Color readingColor = Colors.red.shade700;
+    final Color specialWordColor = readColor.withBlue(150).withGreen(50);
     final Color defaultColor = Colors.grey.shade600;
 
     final List<String> specialWords = ["رَبِّ", "اِلهى", "اَللّهُمَّ"];
@@ -425,13 +277,13 @@ class _ModernVerseListItemState extends State<ModernVerseListItem>
 
       if (isCurrentWord) {
         color = readingColor;
-        fontSize += 2;
+        fontSize += 1;
         fontWeight = FontWeight.bold;
         shadows = [
           Shadow(
-            blurRadius: 12.0,
+            blurRadius: 10.0,
             color: readingColor.withOpacity(0.3),
-            offset: const Offset(0, 2),
+            offset: const Offset(0, 1),
           ),
         ];
       } else if (isPastWord) {
@@ -458,19 +310,124 @@ class _ModernVerseListItemState extends State<ModernVerseListItem>
     return TextSpan(children: textSpans);
   }
 
-  void _handleTap(PrayerProvider prayerProvider) {
-    HapticFeedback.lightImpact();
-    prayerProvider.seek(Duration(milliseconds: widget.verse.startTime));
-    if (!prayerProvider.isPlaying) {
-      prayerProvider.play();
-    }
+  // --- ویجت‌های کمکی برای زیبایی بیشتر ---
+
+  Widget _buildDivider(
+      BuildContext context, bool isCurrent, SettingsProvider settingsProvider) {
+    return Center(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        width: isCurrent ? 80 : 60,
+        height: 2,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: isCurrent
+                ? [
+                    settingsProvider.appColor.withOpacity(0.1),
+                    settingsProvider.appColor.withOpacity(0.8),
+                    settingsProvider.appColor.withOpacity(0.1),
+                  ]
+                : [
+                    Colors.transparent,
+                    Colors.grey.shade300,
+                    Colors.transparent,
+                  ],
+          ),
+          borderRadius: BorderRadius.circular(1),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActiveOverlay(BuildContext context, SettingsProvider settings) {
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                settings.appColor.withOpacity(0.1),
+                Colors.white.withOpacity(0),
+                settings.appColor.withOpacity(0.05),
+              ],
+              stops: const [0.0, 0.5, 1.0],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVerseNumber(
+      BuildContext context, bool isCurrent, SettingsProvider settings) {
+    final bool isPassed =
+        Provider.of<PrayerProvider>(context, listen: false).currentVerseIndex >
+            widget.index;
+
+    return Positioned(
+      top: -10,
+      right: 20,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isCurrent ? settings.appColor : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: isCurrent
+                  ? settings.appColor.withOpacity(0.3)
+                  : Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+          border: isCurrent
+              ? null
+              : Border.all(color: Colors.grey.shade200, width: 1),
+        ),
+        child: Text(
+          'آیه ${widget.verse.id}',
+          style: TextStyle(
+            fontFamily: 'Nabi',
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: isCurrent ? Colors.white : settings.appColor,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlayingIndicator(
+      BuildContext context, SettingsProvider settings) {
+    return Positioned(
+      top: 16,
+      left: 16,
+      child: Container(
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.8),
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: _PlayingAnimation(color: settings.appColor),
+      ),
+    );
   }
 }
 
-// انیمیشن زیبا برای نشان دادن پخش
 class _PlayingAnimation extends StatefulWidget {
   final Color color;
-
   const _PlayingAnimation({required this.color});
 
   @override
@@ -491,10 +448,7 @@ class _PlayingAnimationState extends State<_PlayingAnimation>
     )..repeat();
 
     _animations = List.generate(3, (index) {
-      return Tween<double>(
-        begin: 0.2,
-        end: 1.0,
-      ).animate(
+      return Tween<double>(begin: 0.2, end: 1.0).animate(
         CurvedAnimation(
           parent: _controller,
           curve: Interval(
@@ -520,10 +474,11 @@ class _PlayingAnimationState extends State<_PlayingAnimation>
       builder: (context, child) {
         return Row(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: List.generate(3, (index) {
             return Container(
               width: 3,
-              height: 12 * _animations[index].value,
+              height: 4 + (8 * _animations[index].value),
               margin: const EdgeInsets.symmetric(horizontal: 1),
               decoration: BoxDecoration(
                 color: widget.color,

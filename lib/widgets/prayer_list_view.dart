@@ -134,8 +134,8 @@ class _PrayerListViewState extends State<PrayerListView>
                   child: ModernVerseListItem(
                     verse: verse,
                     index: index,
-                    isVisible: index >= _visibleItemIndex - 1 &&
-                        index <= _visibleItemIndex + 5,
+                    // isVisible: index >= _visibleItemIndex - 1 &&
+                    //     index <= _visibleItemIndex + 5,
                   ),
                 );
               },
