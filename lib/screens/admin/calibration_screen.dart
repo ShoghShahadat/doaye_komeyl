@@ -211,7 +211,7 @@ class CalibrationScreen extends StatelessWidget {
   double _getBottomPanelHeight(CalibrationProvider provider, bool hasConflict) {
     if (hasConflict) return 200;
     if (provider.isRangeSelectionMode) return 80;
-    if (provider.selectedWordKey != null) return 120;
+    if (provider.selectedWordKey != null) return 160;
     return 0;
   }
 
@@ -494,49 +494,45 @@ class _ProfessionalEditingToolbar extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
-        children: [
-          _buildToolButton(
-            icon: Icons.select_all_rounded,
-            label: 'انتخاب محدوده',
-            isActive: provider.isRangeSelectionMode,
-            onPressed: provider.toggleRangeSelectionMode,
-            color: Colors.blue,
-          ),
-          const VerticalDivider(indent: 12, endIndent: 12),
-          Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildQuickActionButton(
-                  icon: Icons.skip_previous_rounded,
-                  onPressed: provider.calibratePrevious,
-                  tooltip: 'کلمه قبلی',
-                ),
-                const SizedBox(width: 8),
-                _buildQuickActionButton(
-                  icon: Icons.refresh_rounded,
-                  onPressed: provider.recalibrateCurrent,
-                  tooltip: 'ثبت مجدد',
-                  color: Colors.orange,
-                ),
-                const SizedBox(width: 8),
-                _buildQuickActionButton(
-                  icon: Icons.skip_next_rounded,
-                  onPressed: provider.calibrateNext,
-                  tooltip: 'کلمه بعدی',
-                ),
-              ],
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: [
+            _buildToolButton(
+              icon: Icons.select_all_rounded,
+              label: 'انتخاب محدوده',
+              isActive: provider.isRangeSelectionMode,
+              onPressed: provider.toggleRangeSelectionMode,
+              color: Colors.blue,
             ),
-          ),
-          const VerticalDivider(indent: 12, endIndent: 12),
-          _buildToolButton(
-            icon: Icons.upload_file_rounded,
-            label: 'وارد کردن',
-            onPressed: () => _showImportDialog(context, provider),
-            color: Colors.green,
-          ),
-        ],
+            const VerticalDivider(indent: 12, endIndent: 12),
+            _buildQuickActionButton(
+              icon: Icons.skip_previous_rounded,
+              onPressed: provider.calibratePrevious,
+              tooltip: 'کلمه قبلی',
+            ),
+            const SizedBox(width: 8),
+            _buildQuickActionButton(
+              icon: Icons.refresh_rounded,
+              onPressed: provider.recalibrateCurrent,
+              tooltip: 'ثبت مجدد',
+              color: Colors.orange,
+            ),
+            const SizedBox(width: 8),
+            _buildQuickActionButton(
+              icon: Icons.skip_next_rounded,
+              onPressed: provider.calibrateNext,
+              tooltip: 'کلمه بعدی',
+            ),
+            const VerticalDivider(indent: 12, endIndent: 12),
+            _buildToolButton(
+              icon: Icons.upload_file_rounded,
+              label: 'وارد کردن',
+              onPressed: () => _showImportDialog(context, provider),
+              color: Colors.green,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1139,40 +1135,41 @@ class _ModernFineTunePanel extends StatelessWidget {
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              children: [
-                _buildNudgeButton(
-                  label: '-100ms',
-                  onPressed: () => provider.nudgeTimestamp(-100),
-                ),
-                const SizedBox(width: 8),
-                _buildNudgeButton(
-                  label: '-10ms',
-                  onPressed: () => provider.nudgeTimestamp(-10),
-                ),
-                const Spacer(),
-                _buildControlButton(
-                  icon: Icons.delete_outline_rounded,
-                  color: Colors.red,
-                  onPressed: provider.deleteSelectedTimestamp,
-                ),
-                const SizedBox(width: 8),
-                _buildControlButton(
-                  icon: Icons.play_arrow_rounded,
-                  color: const Color(0xFF6C63FF),
-                  onPressed: provider.playFromSelected,
-                ),
-                const Spacer(),
-                _buildNudgeButton(
-                  label: '+10ms',
-                  onPressed: () => provider.nudgeTimestamp(10),
-                ),
-                const SizedBox(width: 8),
-                _buildNudgeButton(
-                  label: '+100ms',
-                  onPressed: () => provider.nudgeTimestamp(100),
-                ),
-              ],
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  _buildNudgeButton(
+                    label: '-100ms',
+                    onPressed: () => provider.nudgeTimestamp(-100),
+                  ),
+                  const SizedBox(width: 8),
+                  _buildNudgeButton(
+                    label: '-10ms',
+                    onPressed: () => provider.nudgeTimestamp(-10),
+                  ),
+                  _buildControlButton(
+                    icon: Icons.delete_outline_rounded,
+                    color: Colors.red,
+                    onPressed: provider.deleteSelectedTimestamp,
+                  ),
+                  const SizedBox(width: 8),
+                  _buildControlButton(
+                    icon: Icons.play_arrow_rounded,
+                    color: const Color(0xFF6C63FF),
+                    onPressed: provider.playFromSelected,
+                  ),
+                  _buildNudgeButton(
+                    label: '+10ms',
+                    onPressed: () => provider.nudgeTimestamp(10),
+                  ),
+                  const SizedBox(width: 8),
+                  _buildNudgeButton(
+                    label: '+100ms',
+                    onPressed: () => provider.nudgeTimestamp(100),
+                  ),
+                ],
+              ),
             ),
           ),
         ],
