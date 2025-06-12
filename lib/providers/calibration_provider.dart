@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:komeyl_app/models/calibration_project_model.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:archive/archive_io.dart'; // import پکیج جدید
 
 class CalibrationProvider with ChangeNotifier {
   final AudioPlayer audioPlayer = AudioPlayer();
@@ -40,6 +42,41 @@ class CalibrationProvider with ChangeNotifier {
     await _loadTextFromFile();
     await _loadState(); // بارگذاری کل وضعیت، شامل تاریخچه
     await audioPlayer.setFilePath(project.audioPath);
+  }
+
+  Future<Uint8List?> packageProjectAsZip() async {
+    try {
+      final archive = Archive();
+
+      // ١. افزودن فایل JSON کالیبراسیون
+      final jsonString = exportTimestampsToJson();
+      final jsonBytes = utf8.encode(jsonString);
+      archive.addFile(
+          ArchiveFile('calibration.json', jsonBytes.length, jsonBytes));
+
+      // ٢. افزودن فایل صوتی
+      final audioFile = File(project.audioPath);
+      if (await audioFile.exists()) {
+        final audioBytes = await audioFile.readAsBytes();
+        archive
+            .addFile(ArchiveFile('audio.mp3', audioBytes.length, audioBytes));
+      }
+
+      // ٣. افزودن فایل متنی
+      final textFile = File(project.textPath);
+      if (await textFile.exists()) {
+        final textBytes = await textFile.readAsBytes();
+        archive.addFile(ArchiveFile('text.txt', textBytes.length, textBytes));
+      }
+
+      // ٤. فشرده‌سازی و بازگرداندن بایت‌های فایل zip
+      final zipEncoder = ZipEncoder();
+      final zipData = zipEncoder.encode(archive);
+      return zipData != null ? Uint8List.fromList(zipData) : null;
+    } catch (e) {
+      print('Error packaging project: $e');
+      return null;
+    }
   }
 
   // --- مدیریت تاریخچه (Undo/Redo) ---

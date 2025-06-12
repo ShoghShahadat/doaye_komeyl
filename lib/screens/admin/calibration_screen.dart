@@ -1,3 +1,4 @@
+import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:komeyl_app/models/calibration_project_model.dart';
@@ -70,6 +71,40 @@ class CalibrationScreen extends StatelessWidget {
                         ),
                       ),
                     );
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.archive_outlined),
+                  tooltip: 'بسته‌بندی و خروجی گرفتن',
+                  onPressed: () async {
+                    // نمایش یک لودر کوچک
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text('در حال ساخت بسته پروژه...')),
+                    );
+
+                    final Uint8List? zipData =
+                        await provider.packageProjectAsZip();
+
+                    if (zipData != null && context.mounted) {
+                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                      // استفاده از file_saver برای ذخیره فایل
+                      await FileSaver.instance.saveFile(
+                        name:
+                            '${project.title}_${DateTime.now().toIso8601String()}',
+                        bytes: zipData,
+                        ext: 'zip',
+                        mimeType: MimeType.zip,
+                      );
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('پروژه با موفقیت ذخیره شد!')),
+                      );
+                    } else if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('خطا در ساخت بسته!')),
+                      );
+                    }
                   },
                 ),
                 IconButton(
