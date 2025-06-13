@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:komeyl_app/models/calibration_project_model.dart';
-import 'package:komeyl_app/screens/admin/calibration_screen/calibration_screen.dart';
+import 'package:komeyl_app/screens/admin/calibration/calibration_screen.dart';
 import 'package:path_provider/path_provider.dart';
 
 import 'widgets/create_project_dialog.dart';
