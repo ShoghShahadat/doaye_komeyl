@@ -18,12 +18,16 @@ class _ModernSettingsSheetState extends State<ModernSettingsSheet>
   late AnimationController _fadeController;
   late List<Animation<double>> _itemAnimations;
 
+  // --- شروع اصلاحات: افزایش تعداد آیتم‌ها برای انیمیشن ---
+  // تعداد آیتم‌ها از 7 به 9 افزایش یافت (دو اسلایدر جدید)
+  static const int _itemCount = 9;
+  // --- پایان اصلاحات ---
+
   @override
   void initState() {
     super.initState();
     _slideController = AnimationController(
-      duration:
-          const Duration(milliseconds: 800), // کمی افزایش زمان برای نرمی بیشتر
+      duration: const Duration(milliseconds: 800),
       vsync: this,
     );
     _fadeController = AnimationController(
@@ -31,17 +35,12 @@ class _ModernSettingsSheetState extends State<ModernSettingsSheet>
       vsync: this,
     );
 
-    // انیمیشن برای هر آیتم
-    const int itemCount = 7;
-    _itemAnimations = List.generate(itemCount, (index) {
-      // --- شروع اصلاحات ---
-      // فرمول جدید برای محاسبه بازه زمانی انیمیشن تا از 1.0 بیشتر نشود
-      const double staggerFraction = 0.1; // تاخیر بین هر آیتم
-      const double itemDuration = 0.4; // مدت زمان انیمیشن هر آیتم
+    _itemAnimations = List.generate(_itemCount, (index) {
+      const double staggerFraction = 0.08;
+      const double itemDuration = 0.5;
 
       final double startTime = index * staggerFraction;
-      final double endTime = (startTime + itemDuration)
-          .clamp(0.0, 1.0); // اطمینان از اینکه انتها از 1.0 بیشتر نمی‌شود
+      final double endTime = (startTime + itemDuration).clamp(0.0, 1.0);
 
       return Tween<double>(
         begin: 0,
@@ -56,7 +55,6 @@ class _ModernSettingsSheetState extends State<ModernSettingsSheet>
           ),
         ),
       );
-      // --- پایان اصلاحات ---
     });
 
     _slideController.forward();
@@ -75,18 +73,15 @@ class _ModernSettingsSheetState extends State<ModernSettingsSheet>
     return Consumer<SettingsProvider>(
       builder: (context, settingsProvider, child) {
         return Container(
-          height: MediaQuery.of(context).size.height * 0.85,
+          height: MediaQuery.of(context).size.height * 0.9, // کمی افزایش ارتفاع
           decoration: const BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
           ),
           child: Column(
             children: [
-              // نوار بالای شیت
               _buildSheetHandle(),
-              // هدر
               _buildHeader(context),
-              // محتوای اصلی
               Expanded(
                 child: SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),
@@ -241,6 +236,7 @@ class _ModernSettingsSheetState extends State<ModernSettingsSheet>
     );
   }
 
+  // --- شروع اصلاحات: بازسازی بخش رنگ ---
   Widget _buildColorSection(SettingsProvider settingsProvider) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -278,39 +274,91 @@ class _ModernSettingsSheetState extends State<ModernSettingsSheet>
             ],
           ),
           const SizedBox(height: 16),
-          Container(
-            height: 60,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: ColorPickerSlider(
-                TrackType.hue,
-                HSVColor.fromColor(settingsProvider.appColor),
-                (HSVColor color) {
-                  HapticFeedback.lightImpact();
-                  settingsProvider.updateAppColor(color.toColor());
-                },
-                displayThumbColor: true,
-                fullThumbColor: true,
-              ),
-            ),
+          // اسلایدر فام رنگ (Hue)
+          _buildColorSlider(
+            trackType: TrackType.hue,
+            settingsProvider: settingsProvider,
+          ),
+          const SizedBox(height: 12),
+          // اسلایدر غلظت رنگ (Saturation)
+          _buildColorSlider(
+            trackType: TrackType.saturation,
+            settingsProvider: settingsProvider,
+          ),
+          const SizedBox(height: 12),
+          // اسلایدر روشنایی (Value/Brightness)
+          _buildColorSlider(
+            trackType: TrackType.value,
+            settingsProvider: settingsProvider,
           ),
           const SizedBox(height: 16),
-          // ادامه _buildColorSection
           _buildColorPresets(settingsProvider),
         ],
       ),
     );
   }
+
+  Widget _buildColorSlider({
+    required TrackType trackType,
+    required SettingsProvider settingsProvider,
+  }) {
+    String label;
+    switch (trackType) {
+      case TrackType.hue:
+        label = 'فام رنگ';
+        break;
+      case TrackType.saturation:
+        label = 'غلظت';
+        break;
+      case TrackType.value:
+        label = 'روشنایی';
+        break;
+      default:
+        label = '';
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey[700],
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          height: 40,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: ColorPickerSlider(
+              trackType,
+              HSVColor.fromColor(settingsProvider.appColor),
+              (HSVColor color) {
+                HapticFeedback.lightImpact();
+                settingsProvider.updateAppColor(color.toColor());
+              },
+              displayThumbColor: true,
+              fullThumbColor: true,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+  // --- پایان اصلاحات ---
 
   Widget _buildColorPresets(SettingsProvider settingsProvider) {
     final List<Color> presetColors = [
@@ -528,7 +576,6 @@ class _ModernSettingsSheetState extends State<ModernSettingsSheet>
           Stack(
             alignment: Alignment.center,
             children: [
-              // پیش‌نمایش شفافیت
               Container(
                 height: 40,
                 decoration: BoxDecoration(
@@ -770,7 +817,6 @@ class _ModernSettingsSheetState extends State<ModernSettingsSheet>
             ElevatedButton(
               onPressed: () {
                 HapticFeedback.lightImpact();
-                // بازگشت به تنظیمات پیش‌فرض
                 settingsProvider.updateAppColor(const Color(0xFF1F9671));
                 settingsProvider.updateArabicFontSize(22.0);
                 settingsProvider.updateTranslationFontSize(16.0);

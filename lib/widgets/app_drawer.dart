@@ -1,7 +1,9 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:komeyl_app/providers/settings_provider.dart';
 import 'package:komeyl_app/screens/admin/project_list_screen.dart';
+import 'package:provider/provider.dart';
 
 class AppDrawer extends StatefulWidget {
   const AppDrawer({super.key});
@@ -51,6 +53,11 @@ class _AppDrawerState extends State<AppDrawer>
 
   @override
   Widget build(BuildContext context) {
+    // --- شروع اصلاحات: دسترسی به SettingsProvider ---
+    final settingsProvider = Provider.of<SettingsProvider>(context);
+    final Color appColor = settingsProvider.appColor;
+    // --- پایان اصلاحات ---
+
     return Drawer(
       backgroundColor: const Color(0xFFFAFAFA),
       child: Container(
@@ -60,21 +67,21 @@ class _AppDrawerState extends State<AppDrawer>
             end: Alignment.bottomCenter,
             colors: [
               Colors.white,
-              const Color(0xFF1F9671).withOpacity(0.03),
+              appColor.withOpacity(0.03), // استفاده از رنگ تم
             ],
           ),
         ),
         child: ListView(
           padding: EdgeInsets.zero,
           children: <Widget>[
-            _buildModernHeader(),
+            _buildModernHeader(appColor), // ارسال رنگ به هدر
             const SizedBox(height: 8),
             _buildAnimatedMenuItem(
               index: 0,
               icon: Icons.home_rounded,
               title: 'صفحه اصلی',
               subtitle: 'بازگشت به دعا',
-              color: const Color(0xFF1F9671),
+              color: appColor, // استفاده از رنگ تم
               onTap: () => Navigator.pop(context),
             ),
             _buildAnimatedMenuItem(
@@ -82,7 +89,7 @@ class _AppDrawerState extends State<AppDrawer>
               icon: Icons.tune_rounded,
               title: 'پنل کالیبراسیون',
               subtitle: 'مدیریت پروژه‌ها',
-              color: Colors.deepOrange,
+              color: Colors.deepOrange, // این آیتم برای تمایز، رنگ متفاوتی دارد
               isSpecial: true,
               onTap: () {
                 Navigator.pop(context);
@@ -128,7 +135,7 @@ class _AppDrawerState extends State<AppDrawer>
               title: 'درباره ما',
               subtitle: 'اطلاعات برنامه',
               color: Colors.blue,
-              onTap: () => _showAboutDialog(context),
+              onTap: () => _showAboutDialog(context, appColor),
             ),
             _buildAnimatedMenuItem(
               index: 3,
@@ -136,17 +143,17 @@ class _AppDrawerState extends State<AppDrawer>
               title: 'اشتراک‌گذاری',
               subtitle: 'معرفی به دوستان',
               color: Colors.purple,
-              onTap: () => _shareApp(context),
+              onTap: () => _shareApp(context, appColor),
             ),
             const SizedBox(height: 24),
-            _buildBottomSection(),
+            _buildBottomSection(appColor), // ارسال رنگ به بخش پایانی
           ],
         ),
       ),
     );
   }
 
-  Widget _buildModernHeader() {
+  Widget _buildModernHeader(Color appColor) {
     return AnimatedBuilder(
       animation: _animationController,
       builder: (context, child) {
@@ -157,25 +164,26 @@ class _AppDrawerState extends State<AppDrawer>
             child: Container(
               height: 260,
               decoration: BoxDecoration(
+                // --- شروع اصلاحات: استفاده از رنگ تم در گرادیانت و سایه ---
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    const Color(0xFF1F9671),
-                    const Color(0xFF2BA881),
+                    appColor,
+                    Color.lerp(appColor, Colors.black, 0.2)!,
                   ],
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF1F9671).withOpacity(0.3),
+                    color: appColor.withOpacity(0.3),
                     blurRadius: 20,
                     offset: const Offset(0, 10),
                   ),
                 ],
+                // --- پایان اصلاحات ---
               ),
               child: Stack(
                 children: [
-                  // نقش‌های تزئینی اسلامی
                   Positioned(
                     top: -30,
                     right: -30,
@@ -206,7 +214,6 @@ class _AppDrawerState extends State<AppDrawer>
                       ),
                     ),
                   ),
-                  // محتوای اصلی
                   SafeArea(
                     child: Padding(
                       padding: const EdgeInsets.all(24),
@@ -399,7 +406,7 @@ class _AppDrawerState extends State<AppDrawer>
     );
   }
 
-  Widget _buildBottomSection() {
+  Widget _buildBottomSection(Color appColor) {
     return AnimatedBuilder(
       animation: _animationController,
       builder: (context, child) {
@@ -409,16 +416,18 @@ class _AppDrawerState extends State<AppDrawer>
             margin: const EdgeInsets.all(16),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
+              // --- شروع اصلاحات: استفاده از رنگ تم ---
               gradient: LinearGradient(
                 colors: [
-                  const Color(0xFF1F9671).withOpacity(0.05),
-                  const Color(0xFF1F9671).withOpacity(0.1),
+                  appColor.withOpacity(0.05),
+                  appColor.withOpacity(0.1),
                 ],
               ),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: const Color(0xFF1F9671).withOpacity(0.2),
+                color: appColor.withOpacity(0.2),
               ),
+              // --- پایان اصلاحات ---
             ),
             child: Column(
               children: [
@@ -451,7 +460,7 @@ class _AppDrawerState extends State<AppDrawer>
     );
   }
 
-  void _showAboutDialog(BuildContext context) {
+  void _showAboutDialog(BuildContext context, Color appColor) {
     Navigator.pop(context);
     showDialog(
       context: context,
@@ -481,8 +490,8 @@ class _AppDrawerState extends State<AppDrawer>
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        const Color(0xFF1F9671),
-                        const Color(0xFF2BA881),
+                        appColor,
+                        Color.lerp(appColor, Colors.black, 0.2)!,
                       ],
                     ),
                     shape: BoxShape.circle,
@@ -524,7 +533,7 @@ class _AppDrawerState extends State<AppDrawer>
                 ElevatedButton(
                   onPressed: () => Navigator.pop(context),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1F9671),
+                    backgroundColor: appColor,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 32,
@@ -544,14 +553,14 @@ class _AppDrawerState extends State<AppDrawer>
     );
   }
 
-  void _shareApp(BuildContext context) {
+  void _shareApp(BuildContext context, Color appColor) {
     Navigator.pop(context);
     HapticFeedback.mediumImpact();
-    // اینجا کد share رو اضافه کنید
+    // در اینجا می‌توانید از پکیج share_plus استفاده کنید
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: const Text('لینک برنامه کپی شد'),
-        backgroundColor: Colors.purple,
+        backgroundColor: appColor,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),

@@ -14,10 +14,8 @@ class ModernPrayerSingleView extends StatefulWidget {
   State<ModernPrayerSingleView> createState() => _ModernPrayerSingleViewState();
 }
 
-// --- شروع اصلاحات: افزودن AutomaticKeepAliveClientMixin ---
 class _ModernPrayerSingleViewState extends State<ModernPrayerSingleView>
     with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
-  // --- پایان اصلاحات ---
   late AnimationController _slideController;
   late AnimationController _fadeController;
   late AnimationController _scaleController;
@@ -25,10 +23,8 @@ class _ModernPrayerSingleViewState extends State<ModernPrayerSingleView>
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
 
-  // --- شروع اصلاحات: Override کردن wantKeepAlive ---
   @override
   bool get wantKeepAlive => true;
-  // --- پایان اصلاحات ---
 
   @override
   void initState() {
@@ -85,9 +81,7 @@ class _ModernPrayerSingleViewState extends State<ModernPrayerSingleView>
 
   @override
   Widget build(BuildContext context) {
-    // --- شروع اصلاحات: فراخوانی super.build ---
     super.build(context);
-    // --- پایان اصلاحات ---
     final prayerProvider = Provider.of<PrayerProvider>(context);
     final settingsProvider = Provider.of<SettingsProvider>(context);
 
@@ -95,12 +89,6 @@ class _ModernPrayerSingleViewState extends State<ModernPrayerSingleView>
         prayerProvider.currentVerseIndex == -1) {
       return const _ModernLoadingView();
     }
-
-    final currentVerse =
-        prayerProvider.verses[prayerProvider.currentVerseIndex];
-    final verseKey = 'آیه${currentVerse.id}';
-    final List<WordTiming>? currentWordTimings =
-        prayerProvider.wordTimings[verseKey];
 
     return Stack(
       fit: StackFit.expand,
@@ -132,8 +120,6 @@ class _ModernPrayerSingleViewState extends State<ModernPrayerSingleView>
                     context,
                     prayerProvider,
                     settingsProvider,
-                    currentVerse,
-                    currentWordTimings,
                   ),
                 ),
               ),
@@ -145,123 +131,144 @@ class _ModernPrayerSingleViewState extends State<ModernPrayerSingleView>
     );
   }
 
+  // --- شروع اصلاحات: بازسازی کامل ویجت برای جداسازی پس‌زمینه از محتوا ---
   Widget _buildVerseContent(
     BuildContext context,
     PrayerProvider prayerProvider,
     SettingsProvider settingsProvider,
-    Verse currentVerse,
-    List<WordTiming>? wordTimings,
   ) {
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 800),
-      switchInCurve: Curves.easeOutCubic,
-      switchOutCurve: Curves.easeInCubic,
-      transitionBuilder: (Widget child, Animation<double> animation) {
-        return SlideTransition(
-          position: Tween<Offset>(
-            begin: const Offset(0, 0.1),
-            end: Offset.zero,
-          ).animate(animation),
-          child: FadeTransition(
-            opacity: animation,
-            child: child,
-          ),
-        );
-      },
-      child: Container(
-        key: ValueKey<String>(currentVerse.id),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.white
-                  .withOpacity(settingsProvider.backgroundOpacity * 0.9),
-              Colors.white.withOpacity(settingsProvider.backgroundOpacity),
-              Colors.white
-                  .withOpacity(settingsProvider.backgroundOpacity * 0.9),
-            ],
-          ),
+    // این کانتینر، پس‌زمینه ثابت است و دیگر در انیمیشن شرکت نمی‌کند.
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Colors.white.withOpacity(settingsProvider.backgroundOpacity * 0.9),
+            Colors.white.withOpacity(settingsProvider.backgroundOpacity),
+            Colors.white.withOpacity(settingsProvider.backgroundOpacity * 0.9),
+          ],
         ),
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(32.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _buildVerseNumber(currentVerse, settingsProvider),
-                const SizedBox(height: 32),
-                Container(
-                  constraints: const BoxConstraints(maxWidth: 800),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 32,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(
-                      color: settingsProvider.appColor.withOpacity(0.1),
-                      width: 1,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 20,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                  ),
-                  child: _buildArabicText(
-                    wordTimings,
-                    prayerProvider,
-                    settingsProvider,
-                    currentVerse,
-                  ),
+      ),
+      child: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(32.0),
+          // AnimatedSwitcher اکنون فقط محتوای متنی را در بر می‌گیرد.
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 800),
+            switchInCurve: Curves.easeOutCubic,
+            switchOutCurve: Curves.easeInCubic,
+            transitionBuilder: (Widget child, Animation<double> animation) {
+              return SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0, 0.1),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: FadeTransition(
+                  opacity: animation,
+                  child: child,
                 ),
-                const SizedBox(height: 40),
-                _buildAnimatedDivider(settingsProvider),
-                const SizedBox(height: 40),
-                Container(
-                  constraints: const BoxConstraints(maxWidth: 700),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 24,
-                  ),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        settingsProvider.appColor.withOpacity(0.05),
-                        settingsProvider.appColor.withOpacity(0.02),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: settingsProvider.appColor.withOpacity(0.1),
-                      width: 1,
-                    ),
-                  ),
-                  child: Text(
-                    currentVerse.translation,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontFamily: 'Nabi',
-                      fontSize: settingsProvider.translationFontSize,
-                      color: Colors.grey.shade800,
-                      height: 2.0,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ),
-              ],
+              );
+            },
+            // کلید شناسایی به فرزند AnimatedSwitcher منتقل شده است.
+            child: _buildVerseColumn(
+              context,
+              prayerProvider,
+              settingsProvider,
             ),
           ),
         ),
       ),
     );
   }
+
+  // این متد جدید، فقط ستون محتوای متنی را می‌سازد.
+  Widget _buildVerseColumn(
+    BuildContext context,
+    PrayerProvider prayerProvider,
+    SettingsProvider settingsProvider,
+  ) {
+    // ما باید داده‌های آیه فعلی را در اینجا دوباره بگیریم
+    final currentVerse =
+        prayerProvider.verses[prayerProvider.currentVerseIndex];
+    final verseKey = 'آیه${currentVerse.id}';
+    final List<WordTiming>? currentWordTimings =
+        prayerProvider.wordTimings[verseKey];
+
+    return Column(
+      key: ValueKey<String>(currentVerse.id), // کلید برای شناسایی محتوا
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        _buildVerseNumber(currentVerse, settingsProvider),
+        const SizedBox(height: 32),
+        Container(
+          constraints: const BoxConstraints(maxWidth: 800),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 32,
+          ),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.5),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: settingsProvider.appColor.withOpacity(0.1),
+              width: 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: _buildArabicText(
+            currentWordTimings,
+            prayerProvider,
+            settingsProvider,
+            currentVerse,
+          ),
+        ),
+        const SizedBox(height: 40),
+        _buildAnimatedDivider(settingsProvider),
+        const SizedBox(height: 40),
+        Container(
+          constraints: const BoxConstraints(maxWidth: 700),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 24,
+          ),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                settingsProvider.appColor.withOpacity(0.05),
+                settingsProvider.appColor.withOpacity(0.02),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: settingsProvider.appColor.withOpacity(0.1),
+              width: 1,
+            ),
+          ),
+          child: Text(
+            currentVerse.translation,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontFamily: 'Nabi',
+              fontSize: settingsProvider.translationFontSize,
+              color: Colors.grey.shade800,
+              height: 2.0,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+  // --- پایان اصلاحات ---
 
   Widget _buildVerseNumber(Verse verse, SettingsProvider settingsProvider) {
     return TweenAnimationBuilder<double>(
