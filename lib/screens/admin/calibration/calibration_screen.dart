@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:komeyl_app/models/calibration_project_model.dart';
 import 'package:komeyl_app/providers/calibration_provider.dart';
-import 'package:komeyl_app/screens/admin/preview_screen.dart';
+import 'package:komeyl_app/screens/admin/preview/preview_screen.dart';
 import 'package:provider/provider.dart';
 import 'widgets/app_bar.dart';
 import 'widgets/bottom_panel_handler.dart';
