@@ -1,158 +1,7 @@
-import 'dart:ui';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:komeyl_app/providers/settings_provider.dart';
-import 'package:komeyl_app/screens/admin/project_list_screen.dart';
-import 'package:provider/provider.dart';
+part of 'app_drawer.dart';
 
-class AppDrawer extends StatefulWidget {
-  const AppDrawer({super.key});
-
-  @override
-  State<AppDrawer> createState() => _AppDrawerState();
-}
-
-class _AppDrawerState extends State<AppDrawer>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _slideAnimation;
-  late Animation<double> _fadeAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
-
-    _slideAnimation = Tween<double>(
-      begin: -50,
-      end: 0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: const Interval(0.0, 0.6, curve: Curves.easeOutCubic),
-    ));
-
-    _fadeAnimation = Tween<double>(
-      begin: 0,
-      end: 1,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: const Interval(0.3, 1.0, curve: Curves.easeIn),
-    ));
-
-    _animationController.forward();
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // --- شروع اصلاحات: دسترسی به SettingsProvider ---
-    final settingsProvider = Provider.of<SettingsProvider>(context);
-    final Color appColor = settingsProvider.appColor;
-    // --- پایان اصلاحات ---
-
-    return Drawer(
-      backgroundColor: const Color(0xFFFAFAFA),
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Colors.white,
-              appColor.withOpacity(0.03), // استفاده از رنگ تم
-            ],
-          ),
-        ),
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: <Widget>[
-            _buildModernHeader(appColor), // ارسال رنگ به هدر
-            const SizedBox(height: 8),
-            _buildAnimatedMenuItem(
-              index: 0,
-              icon: Icons.home_rounded,
-              title: 'صفحه اصلی',
-              subtitle: 'بازگشت به دعا',
-              color: appColor, // استفاده از رنگ تم
-              onTap: () => Navigator.pop(context),
-            ),
-            _buildAnimatedMenuItem(
-              index: 1,
-              icon: Icons.tune_rounded,
-              title: 'پنل کالیبراسیون',
-              subtitle: 'مدیریت پروژه‌ها',
-              color: Colors.deepOrange, // این آیتم برای تمایز، رنگ متفاوتی دارد
-              isSpecial: true,
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.of(context).push(
-                  PageRouteBuilder(
-                    pageBuilder: (context, animation, secondaryAnimation) =>
-                        const ProjectListScreen(),
-                    transitionsBuilder:
-                        (context, animation, secondaryAnimation, child) {
-                      return SlideTransition(
-                        position: Tween<Offset>(
-                          begin: const Offset(1.0, 0.0),
-                          end: Offset.zero,
-                        ).animate(CurvedAnimation(
-                          parent: animation,
-                          curve: Curves.easeOutCubic,
-                        )),
-                        child: child,
-                      );
-                    },
-                  ),
-                );
-              },
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-              child: Container(
-                height: 1,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.transparent,
-                      Colors.grey.withOpacity(0.3),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            _buildAnimatedMenuItem(
-              index: 2,
-              icon: Icons.info_outline_rounded,
-              title: 'درباره ما',
-              subtitle: 'اطلاعات برنامه',
-              color: Colors.blue,
-              onTap: () => _showAboutDialog(context, appColor),
-            ),
-            _buildAnimatedMenuItem(
-              index: 3,
-              icon: Icons.share_rounded,
-              title: 'اشتراک‌گذاری',
-              subtitle: 'معرفی به دوستان',
-              color: Colors.purple,
-              onTap: () => _shareApp(context, appColor),
-            ),
-            const SizedBox(height: 24),
-            _buildBottomSection(appColor), // ارسال رنگ به بخش پایانی
-          ],
-        ),
-      ),
-    );
-  }
-
+// این متدها به عنوان بخشی از _AppDrawerState عمل می‌کنند
+extension _DrawerUIBuilders on _AppDrawerState {
   Widget _buildModernHeader(Color appColor) {
     return AnimatedBuilder(
       animation: _animationController,
@@ -164,7 +13,6 @@ class _AppDrawerState extends State<AppDrawer>
             child: Container(
               height: 260,
               decoration: BoxDecoration(
-                // --- شروع اصلاحات: استفاده از رنگ تم در گرادیانت و سایه ---
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -180,7 +28,6 @@ class _AppDrawerState extends State<AppDrawer>
                     offset: const Offset(0, 10),
                   ),
                 ],
-                // --- پایان اصلاحات ---
               ),
               child: Stack(
                 children: [
@@ -416,7 +263,6 @@ class _AppDrawerState extends State<AppDrawer>
             margin: const EdgeInsets.all(16),
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              // --- شروع اصلاحات: استفاده از رنگ تم ---
               gradient: LinearGradient(
                 colors: [
                   appColor.withOpacity(0.05),
@@ -427,7 +273,6 @@ class _AppDrawerState extends State<AppDrawer>
               border: Border.all(
                 color: appColor.withOpacity(0.2),
               ),
-              // --- پایان اصلاحات ---
             ),
             child: Column(
               children: [
@@ -457,115 +302,6 @@ class _AppDrawerState extends State<AppDrawer>
           ),
         );
       },
-    );
-  }
-
-  void _showAboutDialog(BuildContext context, Color appColor) {
-    Navigator.pop(context);
-    showDialog(
-      context: context,
-      builder: (context) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Dialog(
-          backgroundColor: Colors.transparent,
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        appColor,
-                        Color.lerp(appColor, Colors.black, 0.2)!,
-                      ],
-                    ),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.info_rounded,
-                    color: Colors.white,
-                    size: 40,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                const Text(
-                  'دعای کمیل',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Alhura',
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'نسخه 1.0.0',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'این برنامه با هدف ترویج فرهنگ دعا و نیایش\nو آسان‌سازی دسترسی به دعای شریف کمیل\nتوسعه یافته است',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    height: 1.8,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: appColor,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 32,
-                      vertical: 12,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text('بستن'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _shareApp(BuildContext context, Color appColor) {
-    Navigator.pop(context);
-    HapticFeedback.mediumImpact();
-    // در اینجا می‌توانید از پکیج share_plus استفاده کنید
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('لینک برنامه کپی شد'),
-        backgroundColor: appColor,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-      ),
     );
   }
 }

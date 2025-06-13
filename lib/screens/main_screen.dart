@@ -3,10 +3,10 @@ import 'package:flutter/services.dart';
 import 'dart:ui';
 import 'package:komeyl_app/providers/prayer_provider.dart';
 import 'package:komeyl_app/providers/settings_provider.dart';
-import 'package:komeyl_app/widgets/app_drawer.dart';
-import 'package:komeyl_app/widgets/prayer_list_view.dart';
-import 'package:komeyl_app/widgets/prayer_single_view.dart';
-import 'package:komeyl_app/widgets/settings_sheet.dart';
+import 'package:komeyl_app/widgets/export/app_drawer.dart';
+import 'package:komeyl_app/widgets/export/prayer_list_view.dart';
+import 'package:komeyl_app/widgets/export/prayer_single_view.dart';
+import 'package:komeyl_app/widgets/export/settings_sheet.dart';
 import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
 

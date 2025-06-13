@@ -1,169 +1,7 @@
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_colorpicker/flutter_colorpicker.dart';
-import 'package:komeyl_app/providers/settings_provider.dart';
-import 'package:provider/provider.dart';
-import 'dart:ui';
+part of 'settings_sheet.dart';
 
-class ModernSettingsSheet extends StatefulWidget {
-  const ModernSettingsSheet({super.key});
-
-  @override
-  State<ModernSettingsSheet> createState() => _ModernSettingsSheetState();
-}
-
-class _ModernSettingsSheetState extends State<ModernSettingsSheet>
-    with TickerProviderStateMixin {
-  late AnimationController _slideController;
-  late AnimationController _fadeController;
-  late List<Animation<double>> _itemAnimations;
-
-  // --- شروع اصلاحات: افزایش تعداد آیتم‌ها برای انیمیشن ---
-  // تعداد آیتم‌ها از 7 به 9 افزایش یافت (دو اسلایدر جدید)
-  static const int _itemCount = 9;
-  // --- پایان اصلاحات ---
-
-  @override
-  void initState() {
-    super.initState();
-    _slideController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
-    _fadeController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
-
-    _itemAnimations = List.generate(_itemCount, (index) {
-      const double staggerFraction = 0.08;
-      const double itemDuration = 0.5;
-
-      final double startTime = index * staggerFraction;
-      final double endTime = (startTime + itemDuration).clamp(0.0, 1.0);
-
-      return Tween<double>(
-        begin: 0,
-        end: 1,
-      ).animate(
-        CurvedAnimation(
-          parent: _slideController,
-          curve: Interval(
-            startTime,
-            endTime,
-            curve: Curves.easeOutCubic,
-          ),
-        ),
-      );
-    });
-
-    _slideController.forward();
-    _fadeController.forward();
-  }
-
-  @override
-  void dispose() {
-    _slideController.dispose();
-    _fadeController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Consumer<SettingsProvider>(
-      builder: (context, settingsProvider, child) {
-        return Container(
-          height: MediaQuery.of(context).size.height * 0.9, // کمی افزایش ارتفاع
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-          ),
-          child: Column(
-            children: [
-              _buildSheetHandle(),
-              _buildHeader(context),
-              Expanded(
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _buildAnimatedItem(
-                        index: 0,
-                        child: _buildColorSection(settingsProvider),
-                      ),
-                      const SizedBox(height: 24),
-                      _buildAnimatedItem(
-                        index: 1,
-                        child: _buildFontSizeSection(
-                          'اندازه متن عربی',
-                          settingsProvider.arabicFontSize,
-                          (value) =>
-                              settingsProvider.updateArabicFontSize(value),
-                          Icons.text_fields_rounded,
-                          16.0,
-                          40.0,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      _buildAnimatedItem(
-                        index: 2,
-                        child: _buildFontSizeSection(
-                          'اندازه متن ترجمه',
-                          settingsProvider.translationFontSize,
-                          (value) =>
-                              settingsProvider.updateTranslationFontSize(value),
-                          Icons.translate_rounded,
-                          12.0,
-                          30.0,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      _buildAnimatedItem(
-                        index: 3,
-                        child: _buildOpacitySection(settingsProvider),
-                      ),
-                      const SizedBox(height: 24),
-                      _buildAnimatedItem(
-                        index: 4,
-                        child: _buildSwitchSection(
-                          'نمایش نوار زمان',
-                          'کنترل پیشرفت پخش دعا',
-                          Icons.timeline_rounded,
-                          settingsProvider.showTimeline,
-                          (value) => settingsProvider.updateShowTimeline(value),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      _buildAnimatedItem(
-                        index: 5,
-                        child: _buildSwitchSection(
-                          'نمایش اکولایزر',
-                          'انیمیشن موج صوتی هنگام پخش',
-                          Icons.equalizer_rounded,
-                          settingsProvider.showEqualizer,
-                          (value) =>
-                              settingsProvider.updateShowEqualizer(value),
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                      _buildAnimatedItem(
-                        index: 6,
-                        child: _buildResetButton(context, settingsProvider),
-                      ),
-                      const SizedBox(height: 20),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
+// این متدها به عنوان بخشی از _ModernSettingsSheetState عمل می‌کنند
+extension _UIBuilders on _ModernSettingsSheetState {
   Widget _buildSheetHandle() {
     return Container(
       margin: const EdgeInsets.only(top: 12),
@@ -236,7 +74,6 @@ class _ModernSettingsSheetState extends State<ModernSettingsSheet>
     );
   }
 
-  // --- شروع اصلاحات: بازسازی بخش رنگ ---
   Widget _buildColorSection(SettingsProvider settingsProvider) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -274,19 +111,16 @@ class _ModernSettingsSheetState extends State<ModernSettingsSheet>
             ],
           ),
           const SizedBox(height: 16),
-          // اسلایدر فام رنگ (Hue)
           _buildColorSlider(
             trackType: TrackType.hue,
             settingsProvider: settingsProvider,
           ),
           const SizedBox(height: 12),
-          // اسلایدر غلظت رنگ (Saturation)
           _buildColorSlider(
             trackType: TrackType.saturation,
             settingsProvider: settingsProvider,
           ),
           const SizedBox(height: 12),
-          // اسلایدر روشنایی (Value/Brightness)
           _buildColorSlider(
             trackType: TrackType.value,
             settingsProvider: settingsProvider,
@@ -358,16 +192,15 @@ class _ModernSettingsSheetState extends State<ModernSettingsSheet>
       ],
     );
   }
-  // --- پایان اصلاحات ---
 
   Widget _buildColorPresets(SettingsProvider settingsProvider) {
     final List<Color> presetColors = [
-      const Color(0xFF1F9671), // رنگ پیش‌فرض
-      const Color(0xFF2196F3), // آبی
-      const Color(0xFF9C27B0), // بنفش
-      const Color(0xFFE91E63), // صورتی
-      const Color(0xFFFF9800), // نارنجی
-      const Color(0xFF4CAF50), // سبز
+      const Color(0xFF1F9671),
+      const Color(0xFF2196F3),
+      const Color(0xFF9C27B0),
+      const Color(0xFFE91E63),
+      const Color(0xFFFF9800),
+      const Color(0xFF4CAF50),
     ];
 
     return Row(
@@ -400,11 +233,7 @@ class _ModernSettingsSheetState extends State<ModernSettingsSheet>
               ],
             ),
             child: isSelected
-                ? const Icon(
-                    Icons.check,
-                    color: Colors.white,
-                    size: 18,
-                  )
+                ? const Icon(Icons.check, color: Colors.white, size: 18)
                 : null,
           ),
         );
@@ -425,10 +254,7 @@ class _ModernSettingsSheetState extends State<ModernSettingsSheet>
       decoration: BoxDecoration(
         color: Colors.grey[50],
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: Colors.grey[200]!,
-          width: 1,
-        ),
+        border: Border.all(color: Colors.grey[200]!, width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -439,10 +265,8 @@ class _ModernSettingsSheetState extends State<ModernSettingsSheet>
               const SizedBox(width: 12),
               Text(
                 title,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               const Spacer(),
               Container(
@@ -488,20 +312,10 @@ class _ModernSettingsSheetState extends State<ModernSettingsSheet>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                min.round().toString(),
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                ),
-              ),
-              Text(
-                max.round().toString(),
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                ),
-              ),
+              Text(min.round().toString(),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+              Text(max.round().toString(),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600])),
             ],
           ),
         ],
@@ -513,17 +327,10 @@ class _ModernSettingsSheetState extends State<ModernSettingsSheet>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.blue[50]!,
-            Colors.purple[50]!,
-          ],
-        ),
+        gradient:
+            LinearGradient(colors: [Colors.blue[50]!, Colors.purple[50]!]),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: Colors.blue[100]!,
-          width: 1,
-        ),
+        border: Border.all(color: Colors.blue[100]!, width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -538,18 +345,13 @@ class _ModernSettingsSheetState extends State<ModernSettingsSheet>
                   children: [
                     Text(
                       'شفافیت پس‌زمینه',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     SizedBox(height: 4),
                     Text(
                       'تنظیم میزان شفافیت در نمای تک صفحه',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
-                      ),
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
                     ),
                   ],
                 ),
@@ -580,12 +382,10 @@ class _ModernSettingsSheetState extends State<ModernSettingsSheet>
                 height: 40,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.grey[300]!,
-                      Colors.grey[400]!,
-                    ],
-                  ),
+                  gradient: LinearGradient(colors: [
+                    Colors.grey[300]!,
+                    Colors.grey[400]!,
+                  ]),
                 ),
               ),
               Container(
@@ -645,10 +445,7 @@ class _ModernSettingsSheetState extends State<ModernSettingsSheet>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: Colors.grey[200]!,
-          width: 1,
-        ),
+        border: Border.all(color: Colors.grey[200]!, width: 1),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -700,10 +497,7 @@ class _ModernSettingsSheetState extends State<ModernSettingsSheet>
                       const SizedBox(height: 4),
                       Text(
                         subtitle,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
                     ],
                   ),
@@ -738,12 +532,7 @@ class _ModernSettingsSheetState extends State<ModernSettingsSheet>
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        gradient: LinearGradient(
-          colors: [
-            Colors.red[50]!,
-            Colors.orange[50]!,
-          ],
-        ),
+        gradient: LinearGradient(colors: [Colors.red[50]!, Colors.orange[50]!]),
       ),
       child: Material(
         color: Colors.transparent,
@@ -755,11 +544,7 @@ class _ModernSettingsSheetState extends State<ModernSettingsSheet>
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  Icons.restore_rounded,
-                  color: Colors.red[700],
-                  size: 24,
-                ),
+                Icon(Icons.restore_rounded, color: Colors.red[700], size: 24),
                 const SizedBox(width: 12),
                 Text(
                   'بازگشت به تنظیمات پیش‌فرض',
@@ -772,82 +557,6 @@ class _ModernSettingsSheetState extends State<ModernSettingsSheet>
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-
-  void _showResetDialog(
-      BuildContext context, SettingsProvider settingsProvider) {
-    HapticFeedback.mediumImpact();
-    showDialog(
-      context: context,
-      builder: (dialogContext) => BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24),
-          ),
-          title: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.red[50],
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.warning_amber_rounded,
-                  color: Colors.red[700],
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Text('بازگشت به پیش‌فرض'),
-            ],
-          ),
-          content: const Text(
-            'آیا از بازگشت تمام تنظیمات به حالت پیش‌فرض اطمینان دارید؟',
-            style: TextStyle(height: 1.5),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('انصراف'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                HapticFeedback.lightImpact();
-                settingsProvider.updateAppColor(const Color(0xFF1F9671));
-                settingsProvider.updateArabicFontSize(22.0);
-                settingsProvider.updateTranslationFontSize(16.0);
-                settingsProvider.updateShowTimeline(true);
-                settingsProvider.updateBackgroundOpacity(0.95);
-                settingsProvider.updateShowEqualizer(true);
-
-                Navigator.pop(dialogContext);
-                Navigator.pop(context);
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text('تنظیمات به حالت پیش‌فرض بازگشت'),
-                    backgroundColor: Colors.green,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text('تایید'),
-            ),
-          ],
         ),
       ),
     );
