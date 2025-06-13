@@ -2,7 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:komeyl_app/providers/settings_provider.dart';
-import 'package:komeyl_app/screens/admin/project_list_screen.dart';
+import 'package:komeyl_app/screens/admin/project_list/project_list_screen.dart';
 import 'package:provider/provider.dart';
 
 part 'app_drawer_builders.dart';
