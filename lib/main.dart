@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:komeyl_app/providers/prayer_provider.dart';
 import 'package:komeyl_app/providers/settings_provider.dart';
-import 'package:komeyl_app/screens/main_screen.dart';
-import 'package:komeyl_app/screens/splash_screen.dart';
+import 'package:komeyl_app/screens/main_screen/main_screen.dart';
+import 'package:komeyl_app/screens/splash_screen/splash_screen.dart';
 import 'package:provider/provider.dart';
 
 void main() {
