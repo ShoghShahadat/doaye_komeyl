@@ -1,6 +1,6 @@
 # ======================================================================
 #  🚀 گردش کار نهایی، کامل و جامع گیت‌هاب برای پروژه فلاتر
-#  معماری چندمرحله‌ای، بهینه‌سازی شده برای تمام پلتفرم‌ها
+#  معماری چندمرحله‌ای، بهینه‌سازی شده برای تمام پلتفرم‌ها (شامل iOS)
 # ======================================================================
 name: 🐦 Build, Deploy & Optimize Flutter App
 
@@ -10,6 +10,7 @@ on:
     paths:
       - 'lib/**'
       - 'android/**'
+      - 'ios/**' # <--- مسیر iOS اضافه شد
       - 'linux/**'
       - 'windows/**'
       - 'web/**'
@@ -19,7 +20,7 @@ on:
   workflow_dispatch:
 
 env:
-  FLUTTER_VERSION: '3.32.2'
+  FLUTTER_VERSION: '3.22.2' # <--- نسخه فلاتر به‌روز شد
   JAVA_VERSION: '17'
   PUBLIC_REPO_PATH: ShoghShahadat/doaye_komeyl
   PUBLIC_REPO_NAME: doaye_komeyl
@@ -107,14 +108,14 @@ jobs:
         run: |
           echo "::group::📈 Cache Status Report"
           if [ "${{ steps.cache-gradle.outputs.cache-hit }}" = "true" ]; then
-             echo "✅ Gradle cache restored successfully."
+              echo "✅ Gradle cache restored successfully."
           else
-             echo "⚠️ Gradle cache not found. Will be created for the next run."
+              echo "⚠️ Gradle cache not found. Will be created for the next run."
           fi
           if [ "${{ steps.cache-pub.outputs.cache-hit }}" = "true" ]; then
-             echo "✅ Pub cache restored successfully."
+              echo "✅ Pub cache restored successfully."
           else
-             echo "⚠️ Pub cache not found. Will be created for the next run."
+              echo "⚠️ Pub cache not found. Will be created for the next run."
           fi
           echo "::endgroup::"
           echo "::group::📦 Installing Flutter dependencies (flutter pub get)"
@@ -147,10 +148,63 @@ jobs:
           path: build/app/outputs/flutter-apk/
 
   # ======================================================================
-  #  Job 3: 🪟 بیلد ویندوز
+  #  Job 3: 🍎 بیلد آی‌اواس (جدید)
+  # ======================================================================
+  build-ios:
+    name: '🍎 3. Build iOS'
+    needs: setup-environment
+    runs-on: macos-latest # <-- سیستم‌عامل باید macOS باشد
+    steps:
+      - name: '📥 Checkout Repository'
+        uses: actions/checkout@v4
+      - name: '🐦 Restore Flutter from Cache'
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      - name: '🗄️ Cache Flutter Pub Dependencies'
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.PUB_CACHE }}
+          key: ${{ runner.os }}-pub-${{ hashFiles('**/pubspec.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pub-
+      - name: '🔑 Install Apple Certificate and Provisioning Profile'
+        run: |
+          # ایجاد یک keychain موقت و امن
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          security create-keychain -p "" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "" $KEYCHAIN_PATH
+
+          # وارد کردن گواهی دیجیتال از سکرت
+          echo "${{ secrets.P12_CERTIFICATE_BASE64 }}" | base64 --decode > certificate.p12
+          security import certificate.p12 -k $KEYCHAIN_PATH -P "${{ secrets.P12_CERTIFICATE_PASSWORD }}" -A
+          rm certificate.p12
+          
+          # تنظیم keychain موقت به عنوان پیش‌فرض
+          security default-keychain -s $KEYCHAIN_PATH
+
+          # نصب پروفایل توزیع
+          PP_PATH=$RUNNER_TEMP/profile.mobileprovision
+          echo "${{ secrets.PROVISIONING_PROFILE_BASE64 }}" | base64 --decode > $PP_PATH
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp $PP_PATH "$HOME/Library/MobileDevice/Provisioning Profiles/"
+      - name: '⚙️ Get Dependencies'
+        run: flutter pub get
+      - name: '🛠️ Build iOS IPA'
+        run: flutter build ipa --release
+      - name: '⬆️ Upload iOS IPA Artifact'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-ios-ipa
+          path: build/ios/ipa/*.ipa
+
+  # ======================================================================
+  #  Job 4: 🪟 بیلد ویندوز
   # ======================================================================
   build-windows:
-    name: '🪟 3. Build Windows'
+    name: '🪟 4. Build Windows'
     needs: setup-environment
     runs-on: windows-latest
     steps:
@@ -190,10 +244,10 @@ jobs:
           path: build/windows/x64/runner/Release/
 
   # ======================================================================
-  #  Job 4: 🐧 بیلد لینوکس
+  #  Job 5: 🐧 بیلد لینوکس
   # ======================================================================
   build-linux:
-    name: '🐧 4. Build Linux'
+    name: '🐧 5. Build Linux'
     needs: setup-environment
     runs-on: ubuntu-latest
     steps:
@@ -228,10 +282,10 @@ jobs:
           path: build/linux/x64/release/bundle/
           
   # ======================================================================
-  #  Job 5: 🌐 بیلد وب
+  #  Job 6: 🌐 بیلد وب
   # ======================================================================
   build-web:
-    name: '🌐 5. Build Web'
+    name: '🌐 6. Build Web'
     needs: setup-environment
     runs-on: ubuntu-latest
     steps:
@@ -269,10 +323,10 @@ jobs:
           path: build/web/
           
   # ======================================================================
-  #  Job 6: 🚀 استقرار وب
+  #  Job 7: 🚀 استقرار وب
   # ======================================================================
   deploy-web:
-    name: '🚀 6. Deploy Web'
+    name: '🚀 7. Deploy Web'
     needs: build-web
     runs-on: ubuntu-latest
     permissions:
